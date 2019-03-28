@@ -99,9 +99,13 @@ export class Task<TResult> implements PromiseLike<TResult> {
     // though it's probably a good idea if you want to catch exceptions thrown
     // by the setup code.
     if (exec) {
+      const saved = currentContext;
       try {
-        bindContext(exec, this.context)(this);
+        currentContext = this.context;
+        exec(this);
+        currentContext = saved;
       } catch (error) {
+        currentContext = saved;
         this.reject(error);
       }
     }
