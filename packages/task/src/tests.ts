@@ -6,17 +6,17 @@ describe("Task", function () {
     assert.strictEqual(typeof Task, "function");
   });
 
-  it("tracks history correctly", function () {
+  it("tracks context correctly", function () {
     let parentTask: Task<any>;
     return new Task(task => {
       parentTask = task;
       task.resolve(123);
     }).then(oneTwoThree => new Task(child => {
-      assert.strictEqual(child.history.parent, parentTask.history);
+      assert.strictEqual(child.context.parent, parentTask.context);
       setTimeout(() => {
         child.resolve(new Task(grandchild => {
-          assert.strictEqual(grandchild.history.parent, child.history);
-          assert.strictEqual(grandchild.history.parent!.parent, parentTask.history);
+          assert.strictEqual(grandchild.context.parent, child.context);
+          assert.strictEqual(grandchild.context.parent!.parent, parentTask.context);
           grandchild.resolve(oneTwoThree);
         }));
       }, 10);

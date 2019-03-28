@@ -11,39 +11,35 @@ function isPromiseLike(value: any): value is PromiseLike<any> {
   return value && typeof value.then === 'function';
 }
 
-interface TaskHistory {
+interface TaskContext {
   readonly id: number;
-  readonly parent: TaskHistory | null;
+  readonly parent: TaskContext | null;
   [key: string]: any;
 }
 
 let nextTaskID = 1;
-let currentHistory: TaskHistory | null = null;
+let currentContext: TaskContext | null = null;
 
 // It's important that the function returned by this helper not be bound to the
-// current Task, but only to its TaskHistory object.
-function bindHistoryToCallback<TCallback extends AnyFn>(
-  history: TaskHistory | null,
+// current Task, but only to its TaskContext object.
+export function bindContext<TCallback extends AnyFn>(
   callback: TCallback,
-): TCallback {
+  context = currentContext,
+) {
   return function(this: any) {
-    const saved = currentHistory;
+    const saved = currentContext;
     try {
-      currentHistory = history;
+      currentContext = context;
       return callback.apply(this, arguments as any);
     } finally {
-      currentHistory = saved;
+      currentContext = saved;
     }
   } as TCallback;
 }
 
-export function bindHistory<C extends AnyFn>(callback: C) {
-  return bindHistoryToCallback(currentHistory, callback);
-}
-
-export { setTimeoutWithHistory as setTimeout }
-function setTimeoutWithHistory(callback: AnyFn, delay: number) {
-  return setTimeout(bindHistory(callback), delay);
+export { setTimeoutWithContext as setTimeout }
+function setTimeoutWithContext(callback: AnyFn, delay: number) {
+  return setTimeout(bindContext(callback), delay);
 }
 
 // A Task is a deliberately stripped-down Promise-compatible abstraction
@@ -71,10 +67,10 @@ function setTimeoutWithHistory(callback: AnyFn, delay: number) {
 //    enough to make Tasks "thenable," which allows them to be treated as
 //    promises, awaited, returned from Promise callback functions, etc.
 //
-// 5. Tasks remember the tasks that created them via task.history.parent.
-//    This history tracking allows runtime analysis of the abstract call
+// 5. Tasks remember the tasks that created them via task.context.parent.
+//    This context tracking allows runtime analysis of the abstract call
 //    stack of an asynchronous computation, without preventing Task objects
-//    from being garbage collected (since task.history does not refer to any
+//    from being garbage collected (since task.context does not refer to any
 //    task objects).
 
 export class Task<TResult> implements PromiseLike<TResult> {
@@ -86,9 +82,9 @@ export class Task<TResult> implements PromiseLike<TResult> {
   public readonly resolve = (result: TResult | PromiseLike<TResult>) => this.settle(State.RESOLVED, result);
   public readonly reject = (reason: any) => this.settle(State.REJECTED, reason);
 
-  public readonly history: TaskHistory = {
+  public readonly context: TaskContext = {
     id: nextTaskID++,
-    parent: currentHistory,
+    parent: currentContext,
   };
 
   private state: State = State.UNSETTLED;
@@ -104,7 +100,7 @@ export class Task<TResult> implements PromiseLike<TResult> {
     // by the setup code.
     if (exec) {
       try {
-        bindHistoryToCallback(this.history, exec)(this);
+        bindContext(exec, this.context)(this);
       } catch (error) {
         this.reject(error);
       }
@@ -115,8 +111,8 @@ export class Task<TResult> implements PromiseLike<TResult> {
     onResolved?: ((value: TResult) => TResult1 | PromiseLike<TResult1>) | null,
     onRejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
   ): Task<TResult1 | TResult2> {
-    onResolved = onResolved && bindHistoryToCallback(this.history, onResolved);
-    onRejected = onRejected && bindHistoryToCallback(this.history, onRejected);
+    onResolved = onResolved && bindContext(onResolved, this.context);
+    onRejected = onRejected && bindContext(onRejected, this.context);
 
     switch (this.state) {
       case State.UNSETTLED:
