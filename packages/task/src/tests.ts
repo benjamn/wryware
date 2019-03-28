@@ -24,4 +24,18 @@ describe("Task", function () {
       assert.strictEqual(result, 123);
     });
   });
+
+  it("works with Promise.all", function () {
+    return Promise.all([
+      Task.VOID,
+      new Task<number>(task => setTimeout(() => task.resolve(123), 10)),
+      new Task<string>(task => task.resolve("oyez")),
+      "not a task",
+    ]).then(([a, b, c, d]) => {
+      assert.strictEqual(a, void 0);
+      assert.strictEqual(b * 2, 123 * 2);
+      assert.strictEqual(c.slice(0, 2), "oy");
+      assert.strictEqual(d, "not a task");
+    })
+  });
 });
