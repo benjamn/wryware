@@ -1,0 +1,39 @@
+{
+  "name": "@wry/task",
+  "version": "0.1.0",
+  "author": "Ben Newman <ben@eloper.dev>",
+  "description": "Promise-compatible asynchronous computation primitive",
+  "license": "MIT",
+  "main": "lib/task.js",
+  "module": "lib/task.esm.js",
+  "types": "lib/task.d.ts",
+  "keywords": [
+    "Promise",
+    "async",
+    "asynchronous",
+    "task",
+    "computation"
+  ],
+  "homepage": "https://github.com/benjamn/wryware",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benjamn/wryware.git"
+  },
+  "bugs": {
+    "url": "https://github.com/benjamn/wryware/issues"
+  },
+  "scripts": {
+    "build": "tsc && rollup -c",
+    "mocha": "mocha --reporter spec --full-trace lib/tests.js",
+    "prepublish": "npm run build",
+    "test": "npm run build && npm run mocha"
+  },
+  "dependencies": {
+    "tslib": "^1.9.3"
+  },
+  "devDependencies": {
+    "mocha": "^6.0.2",
+    "rollup": "^1.7.4",
+    "rollup-plugin-typescript2": "^0.20.1"
+  }
+}

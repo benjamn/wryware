@@ -1,0 +1,19 @@
+{
+  "name": "wryware",
+  "private": true,
+  "author": "Ben Newman <ben@eloper.dev>",
+  "description": "A collection of packages that are probably a little too clever",
+  "license": "MIT",
+  "scripts": {
+    "postinstall": "lerna exec -- npm install",
+    "build": "lerna run build",
+    "prepublish": "npm run build",
+    "test": "npm run build && lerna run test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^5.2.6",
+    "@types/node": "^11.12.0",
+    "lerna": "^3.13.1",
+    "typescript": "^3.3.4000"
+  }
+}
