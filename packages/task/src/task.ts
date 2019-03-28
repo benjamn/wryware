@@ -66,7 +66,7 @@ export function bindHistory<C extends AnyFn>(callback: C) {
 //    enough to make Tasks "thenable," which allows them to be treated as
 //    promises, awaited, returned from Promise callback functions, etc.
 
-export class Task<TResult> {
+export class Task<TResult> implements PromiseLike<TResult> {
   // The task.resolve and task.reject methods are similar to the Promise
   // resolve and reject functions, except they are exposed publicly. These
   // methods come pre-bound, and they are idempotent, meaning the first call
