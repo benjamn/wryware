@@ -135,7 +135,7 @@ export class Task<TResult> implements PromiseLike<TResult> {
     }
   }
 
-  static fromPromise<T>(promise: Promise<T>): Task<T> {
+  static fromPromise<T>(promise: PromiseLike<T>): Task<T> {
     return new Task<T>(task => promise.then(task.resolve, task.reject));
   }
 
