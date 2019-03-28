@@ -70,6 +70,12 @@ function setTimeoutWithHistory(callback: AnyFn, delay: number) {
 //    Promise-inspired methods on an as-needed basis. However, .then is
 //    enough to make Tasks "thenable," which allows them to be treated as
 //    promises, awaited, returned from Promise callback functions, etc.
+//
+// 5. Tasks remember the tasks that created them via task.history.parent.
+//    This history tracking allows runtime analysis of the abstract call
+//    stack of an asynchronous computation, without preventing Task objects
+//    from being garbage collected (since task.history does not refer to any
+//    task objects).
 
 export class Task<TResult> implements PromiseLike<TResult> {
   // The task.resolve and task.reject methods are similar to the Promise
