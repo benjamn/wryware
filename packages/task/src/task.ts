@@ -5,8 +5,40 @@ const enum State {
   REJECTED,
 }
 
+type AnyFn = (...args: any[]) => any;
+
 function isPromiseLike(value: any): value is PromiseLike<any> {
   return value && typeof value.then === 'function';
+}
+
+interface TaskHistory {
+  readonly id: number;
+  readonly parent: TaskHistory | null;
+  [key: string]: any;
+}
+
+let nextTaskID = 1;
+let currentHistory: TaskHistory | null = null;
+
+// It's important that the function returned by this helper not be bound to the
+// current Task, but only to its TaskHistory object.
+function bindHistoryToCallback<TCallback extends AnyFn>(
+  history: TaskHistory | null,
+  callback: TCallback,
+): TCallback {
+  return function(this: any) {
+    const saved = currentHistory;
+    try {
+      currentHistory = history;
+      return callback.apply(this, arguments as any);
+    } finally {
+      currentHistory = saved;
+    }
+  } as TCallback;
+}
+
+export function bindHistory<C extends AnyFn>(callback: C) {
+  return bindHistoryToCallback(currentHistory, callback);
 }
 
 // A Task is a deliberately stripped-down Promise-compatible abstraction
@@ -43,6 +75,11 @@ export class Task<TResult> {
   public readonly resolve = (result: TResult | PromiseLike<TResult>) => this.settle(State.RESOLVED, result);
   public readonly reject = (reason: any) => this.settle(State.REJECTED, reason);
 
+  public readonly history: TaskHistory = {
+    id: nextTaskID++,
+    parent: currentHistory,
+  };
+
   private state: State = State.UNSETTLED;
   private resultOrError?: any;
 
@@ -56,7 +93,7 @@ export class Task<TResult> {
     // by the setup code.
     if (exec) {
       try {
-        exec(this);
+        bindHistoryToCallback(this.history, exec)(this);
       } catch (error) {
         this.reject(error);
       }
@@ -67,6 +104,9 @@ export class Task<TResult> {
     onResolved?: ((value: TResult) => TResult1 | PromiseLike<TResult1>) | null,
     onRejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
   ): Task<TResult1 | TResult2> {
+    onResolved = onResolved && bindHistoryToCallback(this.history, onResolved);
+    onRejected = onRejected && bindHistoryToCallback(this.history, onRejected);
+
     switch (this.state) {
       case State.UNSETTLED:
       case State.SETTLING:
