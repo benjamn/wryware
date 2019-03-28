@@ -41,6 +41,11 @@ export function bindHistory<C extends AnyFn>(callback: C) {
   return bindHistoryToCallback(currentHistory, callback);
 }
 
+export { setTimeoutWithHistory as setTimeout }
+function setTimeoutWithHistory(callback: AnyFn, delay: number) {
+  return setTimeout(bindHistory(callback), delay);
+}
+
 // A Task is a deliberately stripped-down Promise-compatible abstraction
 // with a few notable differences:
 //
