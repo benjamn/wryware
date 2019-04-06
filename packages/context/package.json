@@ -1,0 +1,32 @@
+{
+  "name": "@wry/context",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Ben Newman <ben@eloper.dev>",
+  "description": "Manage contextual information needed by (a)synchronous tasks without explicitly passing objects around",
+  "license": "MIT",
+  "main": "lib/context.js",
+  "module": "lib/context.esm.js",
+  "types": "lib/context.d.ts",
+  "keywords": [],
+  "homepage": "https://github.com/benjamn/wryware",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benjamn/wryware.git"
+  },
+  "bugs": {
+    "url": "https://github.com/benjamn/wryware/issues"
+  },
+  "scripts": {
+    "clean": "../../node_modules/.bin/rimraf lib",
+    "tsc": "../../node_modules/.bin/tsc",
+    "rollup": "../../node_modules/.bin/rollup -c",
+    "build": "npm run clean && npm run tsc && npm run rollup",
+    "mocha": "../../node_modules/.bin/mocha --reporter spec --full-trace lib/tests.js",
+    "prepublish": "npm run build",
+    "test": "npm run build && npm run mocha"
+  },
+  "dependencies": {
+    "tslib": "^1.9.3"
+  }
+}
