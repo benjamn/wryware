@@ -7,6 +7,17 @@ describe("Task", function () {
     assert.strictEqual(typeof Task, "function");
   });
 
+  it("supports .then as well as .catch", function () {
+    return new Task<string>(task => {
+      setTimeout(() => task.resolve("oyez"), 10);
+    }).then(result => {
+      assert.strictEqual(result, "oyez");
+      throw "catch me if you can";
+    }).catch(reason => {
+      assert.strictEqual(reason, "catch me if you can");
+    });
+  });
+
   it("works with @wry/context", function () {
     const nameSlot = new Slot<string>();
     function withName<T = any>(name: string, exec: (task: Task<T>) => void) {

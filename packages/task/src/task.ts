@@ -28,11 +28,6 @@ function isPromiseLike(value: any): value is PromiseLike<any> {
 //    just too nice to give up.
 //
 // 3. A Task can be turned into an equivalent Promise via task.toPromise().
-//
-// 4. For now, Tasks only support a .then method. We might add other
-//    Promise-inspired methods on an as-needed basis. However, .then is
-//    enough to make Tasks "thenable," which allows them to be treated as
-//    promises, awaited, returned from Promise callback functions, etc.
 
 export class Task<TResult> implements PromiseLike<TResult> {
   // The task.resolve and task.reject methods are similar to the Promise
@@ -83,6 +78,10 @@ export class Task<TResult> implements PromiseLike<TResult> {
           onRejected ? onRejected(this.resultOrError) : this.resultOrError,
         ));
     }
+  }
+
+  public catch<T>(onRejected: (reason: any) => T | PromiseLike<T>) {
+    return this.then(null, onRejected);
   }
 
   static fromPromise<T>(promise: PromiseLike<T>): Task<T> {
