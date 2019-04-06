@@ -1,8 +1,365 @@
-import assert from "assert";
-import { name } from "./context";
+import * as assert from "assert";
+import {
+  Slot,
+  bind,
+  noContext,
+  setTimeout,
+  asyncFromGen
+} from "./context";
 
-describe("context", function () {
-  it("should be importable", function () {
-    assert.strictEqual(name, "@wry/context");
+function repeat(s: string, times: number) {
+  let result = "";
+  while (times --> 0) result += s;
+  return result;
+}
+
+describe("Slot", function () {
+  it("is importable", function () {
+    assert.strictEqual(typeof Slot, "function");
+  });
+
+  it("has no value initially", function () {
+    const slot = new Slot;
+    assert.strictEqual(slot.hasValue(), false);
+    assert.strictEqual(typeof slot.getValue(), "undefined");
+  });
+
+  it("retains values set by withValue", function () {
+    const slot = new Slot<number>();
+
+    const results = slot.withValue(123, () => {
+      assert.strictEqual(slot.hasValue(), true);
+      assert.strictEqual(slot.getValue(), 123);
+
+      const results = [
+        slot.getValue(),
+        slot.withValue(456, () => {
+          assert.strictEqual(slot.hasValue(), true);
+          return slot.getValue();
+        }),
+        slot.withValue(789, () => {
+          assert.strictEqual(slot.hasValue(), true);
+          return slot.getValue();
+        }),
+      ];
+
+      assert.strictEqual(slot.hasValue(), true);
+      assert.strictEqual(slot.getValue(), 123);
+
+      return results;
+    });
+
+    assert.strictEqual(slot.hasValue(), false);
+    assert.deepEqual(results, [123, 456, 789]);
+  });
+
+  it("is not confused by other slots", function () {
+    const stringSlot = new Slot<string>();
+    const numberSlot = new Slot<number>();
+
+    function inner() {
+      return repeat(
+        stringSlot.getValue()!,
+        numberSlot.getValue()!,
+      );
+    }
+
+    const oneWay = stringSlot.withValue("oyez", () => {
+      return numberSlot.withValue(3, inner);
+    });
+
+    assert.strictEqual(stringSlot.hasValue(), false);
+    assert.strictEqual(numberSlot.hasValue(), false);
+
+    const otherWay = numberSlot.withValue(3, () => {
+      return stringSlot.withValue("oyez", inner);
+    });
+
+    assert.strictEqual(stringSlot.hasValue(), false);
+    assert.strictEqual(numberSlot.hasValue(), false);
+
+    assert.strictEqual(oneWay, otherWay);
+    assert.strictEqual(oneWay, "oyezoyezoyez");
+  });
+});
+
+describe("bind", function () {
+  it("is importable", function () {
+    assert.strictEqual(typeof bind, "function");
+  });
+
+  it("preserves multiple slots", function () {
+    const stringSlot = new Slot<string>();
+    const numberSlot = new Slot<number>();
+
+    function neither() {
+      assert.strictEqual(stringSlot.hasValue(), false);
+      assert.strictEqual(numberSlot.hasValue(), false);
+    }
+
+    const checks = [bind(neither)];
+
+    stringSlot.withValue("asdf", () => {
+      function justStringAsdf() {
+        assert.strictEqual(stringSlot.hasValue(), true);
+        assert.strictEqual(stringSlot.getValue(), "asdf");
+        assert.strictEqual(numberSlot.hasValue(), false);
+      }
+
+      checks.push(bind(justStringAsdf));
+
+      numberSlot.withValue(54321, () => {
+        checks.push(bind(function both() {
+          assert.strictEqual(stringSlot.hasValue(), true);
+          assert.strictEqual(stringSlot.getValue(), "asdf");
+          assert.strictEqual(numberSlot.hasValue(), true);
+          assert.strictEqual(numberSlot.getValue(), 54321);
+        }));
+      });
+
+      stringSlot.withValue("oyez", () => {
+        checks.push(bind(function justStringOyez() {
+          assert.strictEqual(stringSlot.hasValue(), true);
+          assert.strictEqual(stringSlot.getValue(), "oyez");
+          assert.strictEqual(numberSlot.hasValue(), false);
+        }));
+
+        numberSlot.withValue(12345, () => {
+          checks.push(bind(function bothAgain() {
+            assert.strictEqual(stringSlot.hasValue(), true);
+            assert.strictEqual(stringSlot.getValue(), "oyez");
+            assert.strictEqual(numberSlot.hasValue(), true);
+            assert.strictEqual(numberSlot.getValue(), 12345);
+          }));
+        });
+      });
+
+      checks.push(bind(justStringAsdf));
+    });
+
+    checks.push(bind(neither));
+
+    checks.forEach(check => check());
+  });
+
+  it("does not permit rebinding", function () {
+    const slot = new Slot<number>();
+    const bound = slot.withValue(1, () => bind(function () {
+      assert.strictEqual(slot.hasValue(), true);
+      assert.strictEqual(slot.getValue(), 1);
+      return slot.getValue();
+    }));
+    assert.strictEqual(bound(), 1);
+    const rebound = slot.withValue(2, () => bind(bound));
+    assert.strictEqual(rebound(), 1);
+    assert.strictEqual(slot.hasValue(), false);
+  });
+});
+
+describe("noContext", function () {
+  it("is importable", function () {
+    assert.strictEqual(typeof noContext, "function");
+  });
+
+  it("severs context set by withValue", function () {
+    const slot = new Slot<string>();
+    const result = slot.withValue("asdf", function () {
+      assert.strictEqual(slot.getValue(), "asdf");
+      return noContext(() => {
+        assert.strictEqual(slot.hasValue(), false);
+        return "inner";
+      });
+    });
+    assert.strictEqual(result, "inner");
+  });
+
+  it("severs bound context", function () {
+    const slot = new Slot<string>();
+    const bound = slot.withValue("asdf", function () {
+      assert.strictEqual(slot.getValue(), "asdf");
+      return bind(function () {
+        assert.strictEqual(slot.getValue(), "asdf");
+        return noContext(() => {
+          assert.strictEqual(slot.hasValue(), false);
+          return "inner";
+        });
+      });
+    });
+    assert.strictEqual(slot.hasValue(), false);
+    assert.strictEqual(bound(), "inner");
+  });
+
+  it("permits reestablishing inner context values", function () {
+    const slot = new Slot<string>();
+    const bound = slot.withValue("asdf", function () {
+      assert.strictEqual(slot.getValue(), "asdf");
+      return bind(function () {
+        assert.strictEqual(slot.getValue(), "asdf");
+        return noContext(() => {
+          assert.strictEqual(slot.hasValue(), false);
+          return slot.withValue("oyez", () => {
+            assert.strictEqual(slot.hasValue(), true);
+            return slot.getValue();
+          });
+        });
+      });
+    });
+    assert.strictEqual(slot.hasValue(), false);
+    assert.strictEqual(bound(), "oyez");
+  });
+});
+
+describe("setTimeout", function () {
+  it("is importable", function () {
+    assert.strictEqual(typeof setTimeout, "function");
+  });
+
+  it("binds its callback", function () {
+    const booleanSlot = new Slot<boolean>();
+    const objectSlot = new Slot<{ foo: number }>();
+
+    return new Promise((resolve, reject) => {
+      booleanSlot.withValue(true, () => {
+        assert.strictEqual(booleanSlot.getValue(), true);
+        objectSlot.withValue({ foo: 42 }, () => {
+          setTimeout(function () {
+            try {
+              assert.strictEqual(booleanSlot.hasValue(), true);
+              assert.strictEqual(booleanSlot.getValue(), true);
+              assert.strictEqual(objectSlot.hasValue(), true);
+              assert.strictEqual(objectSlot.getValue()!.foo, 42);
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          }, 10);
+        })
+      });
+    }).then(() => {
+      assert.strictEqual(booleanSlot.hasValue(), false);
+      assert.strictEqual(objectSlot.hasValue(), false);
+    });
+  });
+});
+
+describe("asyncFromGen", function () {
+  it("is importable", function () {
+    assert.strictEqual(typeof asyncFromGen, "function");
+  });
+
+  it("works like an async function", asyncFromGen(function*() {
+    let sum = 0;
+    const limit = yield new Promise(resolve => {
+      setTimeout(() => resolve(10), 10);
+    });
+    for (let i = 0; i < limit; ++i) {
+      sum += yield i + 1;
+    }
+    assert.strictEqual(sum, 55);
+    return Promise.resolve("ok");
+  }));
+
+  it("properly handles exceptions", async function () {
+    const fn = asyncFromGen(function*(throwee?: object) {
+      const result = yield Promise.resolve("ok");
+      if (throwee) {
+        throw yield throwee;
+      }
+      return result;
+    });
+
+    const okPromise = fn();
+    const expected = {};
+    const koPromise = fn(expected);
+
+    assert.strictEqual(await okPromise, "ok");
+
+    try {
+      await koPromise;
+      throw new Error("not reached");
+    } catch (error) {
+      assert.strictEqual(error, expected);
+    }
+
+    try {
+      await fn(Promise.resolve("oyez"));
+      throw new Error("not reached");
+    } catch (thrown) {
+      assert.strictEqual(thrown, "oyez");
+    }
+  });
+
+  it("propagates contextual slot values across yields", function () {
+    const stringSlot = new Slot<string>();
+    const numberSlot = new Slot<number>();
+
+    function checkNoValues() {
+      assert.strictEqual(stringSlot.hasValue(), false);
+      assert.strictEqual(numberSlot.hasValue(), false);
+    }
+
+    const inner = asyncFromGen(function*(
+      stringValue: string,
+      numberValue: number,
+    ) {
+      function checkValues() {
+        assert.strictEqual(stringSlot.getValue(), stringValue);
+        assert.strictEqual(numberSlot.getValue(), numberValue);
+      }
+
+      checkValues();
+
+      yield new Promise(resolve => setTimeout(function () {
+        checkValues();
+        resolve();
+      }, 10));
+
+      checkValues();
+
+      yield new Promise(resolve => {
+        checkValues();
+        resolve();
+      });
+
+      checkValues();
+
+      yield Promise.resolve().then(checkNoValues);
+
+      checkValues();
+
+      return repeat(stringValue, numberValue);
+    });
+
+    const outer = asyncFromGen(function*() {
+      checkNoValues();
+
+      const oyezPromise = stringSlot.withValue("oyez", () => {
+        return numberSlot.withValue(3, () => inner("oyez", 3));
+      });
+
+      checkNoValues();
+
+      const hahaPromise = numberSlot.withValue(4, () => {
+        return stringSlot.withValue("ha", () => inner("ha", 4));
+      });
+
+      checkNoValues();
+
+      assert.strictEqual(yield oyezPromise, "oyezoyezoyez");
+      assert.strictEqual(yield hahaPromise, "hahahaha");
+
+      checkNoValues();
+
+      return Promise.all([oyezPromise, hahaPromise]);
+    });
+
+    return outer().then(results => {
+      checkNoValues();
+
+      assert.deepEqual(results, [
+        "oyezoyezoyez",
+        "hahahaha",
+      ]);
+    });
   });
 });
