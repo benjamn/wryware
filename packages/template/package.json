@@ -1,6 +1,5 @@
 {
   "name": "@wry/template",
-  "version": "0.1.0",
   "private": true,
   "author": "Ben Newman <ben@eloper.dev>",
   "description": "Template for new @wry/* packages",
