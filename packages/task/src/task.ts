@@ -59,6 +59,14 @@ export class Task<TResult> implements PromiseLike<TResult> {
     }
   }
 
+  static resolve<T>(value: T | PromiseLike<T>): Task<T> {
+    return new this<T>(task => task.resolve(value));
+  }
+
+  static reject<T>(value: T | PromiseLike<T>): Task<T> {
+    return new this<T>(task => task.reject(value));
+  }
+
   public then<A = TResult, B = never>(
     onResolved?: ((value: TResult) => A | PromiseLike<A>) | null,
     onRejected?: ((reason: any) => B | PromiseLike<B>) | null,
@@ -66,7 +74,7 @@ export class Task<TResult> implements PromiseLike<TResult> {
     switch (this.state) {
       case State.UNSETTLED:
       case State.SETTLING:
-        return Task.fromPromise(this.toPromise().then(onResolved, onRejected));
+        return Task.resolve(this.toPromise().then(onResolved, onRejected));
 
       case State.RESOLVED:
         return new Task<any>(task => task.resolve(
@@ -82,10 +90,6 @@ export class Task<TResult> implements PromiseLike<TResult> {
 
   public catch<T>(onRejected: (reason: any) => T | PromiseLike<T>) {
     return this.then(null, onRejected);
-  }
-
-  static fromPromise<T>(promise: PromiseLike<T>): Task<T> {
-    return new Task<T>(task => promise.then(task.resolve, task.reject));
   }
 
   // Although Task is intended to be lighter-weight than Promise, a Task can be

@@ -18,6 +18,23 @@ describe("Task", function () {
     });
   });
 
+  it("supports Task.resolve and Task.reject", function () {
+    const resolved = Task.resolve(Promise.resolve(1234));
+    assert.ok(resolved instanceof Task);
+
+    const rejected = Task.reject(new Error("oyez"));
+    assert.ok(rejected instanceof Task);
+
+    return resolved.then(result => {
+      assert.strictEqual(result, 1234);
+      return rejected;
+    }).then(() => {
+      throw new Error("not reached");
+    }, error => {
+      assert.strictEqual(error.message, "oyez");
+    });
+  });
+
   it("works with @wry/context", function () {
     const nameSlot = new Slot<string>();
     function withName<T = any>(name: string, exec: (task: Task<T>) => void) {
