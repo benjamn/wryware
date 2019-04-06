@@ -64,10 +64,10 @@ export class Task<TResult> implements PromiseLike<TResult> {
     }
   }
 
-  public then<TResult1 = TResult, TResult2 = never>(
-    onResolved?: ((value: TResult) => TResult1 | PromiseLike<TResult1>) | null,
-    onRejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
-  ): Task<TResult1 | TResult2> {
+  public then<A = TResult, B = never>(
+    onResolved?: ((value: TResult) => A | PromiseLike<A>) | null,
+    onRejected?: ((reason: any) => B | PromiseLike<B>) | null,
+  ): Task<A | B> {
     switch (this.state) {
       case State.UNSETTLED:
       case State.SETTLING:
