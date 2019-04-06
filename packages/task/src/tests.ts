@@ -1,26 +1,44 @@
 import assert from "assert";
-import { Task, setTimeout } from "./task";
+import { Task } from "./task";
+import { Slot, setTimeout } from "@wry/context";
 
 describe("Task", function () {
   it("should be importable", function () {
     assert.strictEqual(typeof Task, "function");
   });
 
-  it("tracks context correctly", function () {
-    let parentTask: Task<any>;
-    return new Task(task => {
-      parentTask = task;
+  it("works with @wry/context", function () {
+    const nameSlot = new Slot<string>();
+    function withName<T = any>(name: string, exec: (task: Task<T>) => void) {
+      return new Task<T>(task => nameSlot.withValue(name, () => exec(task)));
+    }
+
+    return withName("parent", task => {
+      assert.strictEqual(nameSlot.getValue(), "parent");
       task.resolve(123);
-    }).then(oneTwoThree => new Task(child => {
-      assert.strictEqual(child.context.parent, parentTask.context);
+    }).then(oneTwoThree => withName("child", child => {
+      assert.strictEqual(nameSlot.getValue(), "child");
+
+      const sibling = withName("sibling", task => {
+        task.resolve(nameSlot.getValue());
+      }).then(result => {
+        assert.strictEqual(result, "sibling");
+        assert.strictEqual(nameSlot.getValue(), "child");
+      });
+
       setTimeout(() => {
-        child.resolve(new Task(grandchild => {
-          assert.strictEqual(grandchild.context.parent, child.context);
-          assert.strictEqual(grandchild.context.parent!.parent, parentTask.context);
-          grandchild.resolve(oneTwoThree);
+        assert.strictEqual(nameSlot.getValue(), "child");
+        child.resolve(withName("grandchild", grandchild => {
+          assert.strictEqual(nameSlot.getValue(), "grandchild");
+          sibling.then(() => {
+            assert.strictEqual(nameSlot.getValue(), "grandchild");
+            grandchild.resolve(oneTwoThree);
+          }, grandchild.reject);
         }));
       }, 10);
+
     })).then(result => {
+      assert.strictEqual(nameSlot.hasValue(), false);
       assert.strictEqual(result, 123);
     });
   });
