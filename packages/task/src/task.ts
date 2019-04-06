@@ -5,41 +5,8 @@ const enum State {
   REJECTED,
 }
 
-type AnyFn = (...args: any[]) => any;
-
 function isPromiseLike(value: any): value is PromiseLike<any> {
   return value && typeof value.then === 'function';
-}
-
-interface TaskContext {
-  readonly id: number;
-  readonly parent: TaskContext | null;
-  [key: string]: any;
-}
-
-let nextTaskID = 1;
-let currentContext: TaskContext | null = null;
-
-// It's important that the function returned by this helper not be bound to the
-// current Task, but only to its TaskContext object.
-export function bindContext<TCallback extends AnyFn>(
-  callback: TCallback,
-  context = currentContext,
-) {
-  return function(this: any) {
-    const saved = currentContext;
-    try {
-      currentContext = context;
-      return callback.apply(this, arguments as any);
-    } finally {
-      currentContext = saved;
-    }
-  } as TCallback;
-}
-
-export { setTimeoutWithContext as setTimeout }
-function setTimeoutWithContext(callback: AnyFn, delay: number) {
-  return setTimeout(bindContext(callback), delay);
 }
 
 // A Task is a deliberately stripped-down Promise-compatible abstraction
@@ -66,12 +33,6 @@ function setTimeoutWithContext(callback: AnyFn, delay: number) {
 //    Promise-inspired methods on an as-needed basis. However, .then is
 //    enough to make Tasks "thenable," which allows them to be treated as
 //    promises, awaited, returned from Promise callback functions, etc.
-//
-// 5. Tasks remember the tasks that created them via task.context.parent.
-//    This context tracking allows runtime analysis of the abstract call
-//    stack of an asynchronous computation, without preventing Task objects
-//    from being garbage collected (since task.context does not refer to any
-//    task objects).
 
 export class Task<TResult> implements PromiseLike<TResult> {
   // The task.resolve and task.reject methods are similar to the Promise
@@ -79,13 +40,9 @@ export class Task<TResult> implements PromiseLike<TResult> {
   // methods come pre-bound, and they are idempotent, meaning the first call
   // always wins, even if the argument is a Task/Promise/thenable that needs
   // to be resolved.
-  public readonly resolve = (result: TResult | PromiseLike<TResult>) => this.settle(State.RESOLVED, result);
+  public readonly resolve =
+    (result: TResult | PromiseLike<TResult>) => this.settle(State.RESOLVED, result);
   public readonly reject = (reason: any) => this.settle(State.REJECTED, reason);
-
-  public readonly context: TaskContext = {
-    id: nextTaskID++,
-    parent: currentContext,
-  };
 
   private state: State = State.UNSETTLED;
   private resultOrError?: any;
@@ -99,13 +56,9 @@ export class Task<TResult> implements PromiseLike<TResult> {
     // though it's probably a good idea if you want to catch exceptions thrown
     // by the setup code.
     if (exec) {
-      const saved = currentContext;
       try {
-        currentContext = this.context;
         exec(this);
-        currentContext = saved;
       } catch (error) {
-        currentContext = saved;
         this.reject(error);
       }
     }
@@ -115,9 +68,6 @@ export class Task<TResult> implements PromiseLike<TResult> {
     onResolved?: ((value: TResult) => TResult1 | PromiseLike<TResult1>) | null,
     onRejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
   ): Task<TResult1 | TResult2> {
-    onResolved = onResolved && bindContext(onResolved, this.context);
-    onRejected = onRejected && bindContext(onRejected, this.context);
-
     switch (this.state) {
       case State.UNSETTLED:
       case State.SETTLING:
