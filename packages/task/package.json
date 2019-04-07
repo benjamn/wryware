@@ -27,7 +27,7 @@
     "tsc": "../../node_modules/.bin/tsc",
     "rollup": "../../node_modules/.bin/rollup -c",
     "build": "npm run clean && npm run tsc && npm run rollup",
-    "mocha": "../../node_modules/.bin/mocha --reporter spec --full-trace lib/tests.js",
+    "mocha": "node ../../node_modules/.bin/mocha --reporter spec --full-trace lib/tests.js",
     "prepublish": "npm run build",
     "test": "npm run build && npm run mocha"
   },
