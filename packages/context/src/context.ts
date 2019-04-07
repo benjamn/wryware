@@ -12,21 +12,34 @@ slotIdMap.set = slotIdMap.set;
 slotIdMap.get = slotIdMap.get;
 let nextSlotId = 1;
 
+// This unique internal object is used to denote the absence of a value
+// for a given Slot, and is never exposed to outside code.
+const MISSING_VALUE: any = {};
+
 // Returns the ID of the given slot if the slot has a value defined.
+// Caches the result in currentContext.slots for faster future lookups.
 function lookup(slot: Slot<any>): number | undefined {
   const slotId = slotIdMap.get(slot)!;
   for (let context = currentContext; context; context = context.parent) {
     // We use the Slot object iself as a key to its value, which means the
     // value cannot be obtained without a reference to the Slot object.
     if (slotId in context.slots) {
+      const value = context.slots[slotId];
+      if (value === MISSING_VALUE) break;
       if (context !== currentContext) {
         // Cache the value in currentContext.slots so the next lookup will
         // be faster. This caching is safe because the tree of contexts and
         // the values of the slots are logically immutable.
-        currentContext!.slots[slotId] = context.slots[slotId];
+        currentContext!.slots[slotId] = value;
       }
       return slotId;
     }
+  }
+  if (currentContext) {
+    // If a value was not found for this Slot, it's never going to be found
+    // no matter how many times we look it up, so we might as well cache
+    // the absence of the value, too.
+    currentContext.slots[slotId] = MISSING_VALUE;
   }
 }
 
