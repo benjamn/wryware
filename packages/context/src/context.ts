@@ -12,42 +12,47 @@ slotIdMap.set = slotIdMap.set;
 slotIdMap.get = slotIdMap.get;
 let nextSlotId = 1;
 
+// Returns the ID of the given slot if the slot has a value defined.
+function lookup(slot: Slot<any>): number | undefined {
+  const slotId = slotIdMap.get(slot)!;
+  for (let context = currentContext; context; context = context.parent) {
+    // We use the Slot object iself as a key to its value, which means the
+    // value cannot be obtained without a reference to the Slot object.
+    if (slotId in context.slots) {
+      if (context !== currentContext) {
+        // Cache the value in currentContext.slots so the next lookup will
+        // be faster. This caching is safe because the tree of contexts and
+        // the values of the slots are logically immutable.
+        currentContext!.slots[slotId] = context.slots[slotId];
+      }
+      return slotId;
+    }
+  }
+}
+
 export class Slot<TValue> {
   constructor() {
     slotIdMap.set(this, nextSlotId++);
   }
 
-  public hasValue(): boolean {
-    const slotId = slotIdMap.get(this)!;
-    for (let context = currentContext; context; context = context.parent) {
-      // We use the Slot object iself as a key to its value, which means the
-      // value cannot be obtained without a reference to the Slot object.
-      if (slotId in context.slots) {
-        if (context !== currentContext) {
-          // Cache the value in currentContext.slots so the next lookup will
-          // be faster. This caching is safe because the tree of contexts and
-          // the values of the slots are logically immutable.
-          currentContext!.slots[slotId] = context.slots[slotId];
-        }
-        return true;
-      }
-    }
-    return false;
-  }
+  public hasValue = (): boolean => !!lookup(this);
 
-  public getValue(): TValue | undefined {
-    if (this.hasValue()) {
-      return currentContext!.slots[slotIdMap.get(this)!] as TValue;
+  public getValue = (): TValue | undefined => {
+    const slotId = lookup(this);
+    if (slotId) {
+      return currentContext!.slots[slotId] as TValue;
     }
   }
 
-  public withValue<TResult>(
+  public withValue = <TResult>(
     value: TValue,
     callback: () => TResult,
-  ): TResult {
+  ): TResult => {
     const parent = currentContext;
-    const slots = Object.create(null);
-    slots[slotIdMap.get(this)!] = value;
+    const slots = {
+      __proto__: null,
+      [slotIdMap.get(this)!]: value,
+    };
     currentContext = { parent, slots };
     try {
       return callback();
