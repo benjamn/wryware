@@ -1,3 +1,5 @@
+import { bind } from '@wry/context';
+
 const enum State {
   UNSETTLED,
   SETTLING,
@@ -74,7 +76,10 @@ export class Task<TResult> implements PromiseLike<TResult> {
     switch (this.state) {
       case State.UNSETTLED:
       case State.SETTLING:
-        return Task.resolve(this.toPromise().then(onResolved, onRejected));
+        return Task.resolve(this.toPromise().then(
+          onResolved && bind(onResolved),
+          onRejected && bind(onRejected),
+        ));
 
       case State.RESOLVED:
         return new Task<any>(task => task.resolve(
