@@ -48,16 +48,13 @@ export class Slot<TValue> {
     value: TValue,
     callback: () => TResult,
   ): TResult => {
-    const parent = currentContext;
-    const slots = {
-      __proto__: null,
-      [slotIdMap.get(this)!]: value,
-    };
-    currentContext = { parent, slots };
+    const slots = Object.create(null);
+    slots[slotIdMap.get(this)!] = value;
+    currentContext = { parent: currentContext, slots };
     try {
       return callback();
     } finally {
-      currentContext = parent;
+      currentContext = currentContext.parent;
     }
   }
 }
