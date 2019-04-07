@@ -1,6 +1,6 @@
 type Context = {
   parent: Context | null;
-  slots: { [key: number]: any };
+  slots: { [slotId: number]: any };
 }
 
 let currentContext: Context | null = null;
