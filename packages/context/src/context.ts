@@ -1,21 +1,33 @@
 type Context = {
   parent: Context | null;
-  slots: WeakMap<Slot<any>, any>;
+  slots: { [key: number]: any };
 }
 
 let currentContext: Context | null = null;
 
+const slotIdMap = new WeakMap<Slot<any>, number>();
+// Pull down the prototype methods that we use onto the slotIdMap instance
+// so that they can't be tampered with by malicious code.
+slotIdMap.set = slotIdMap.set;
+slotIdMap.get = slotIdMap.get;
+let nextSlotId = 1;
+
 export class Slot<TValue> {
+  constructor() {
+    slotIdMap.set(this, nextSlotId++);
+  }
+
   public hasValue(): boolean {
+    const slotId = slotIdMap.get(this)!;
     for (let context = currentContext; context; context = context.parent) {
       // We use the Slot object iself as a key to its value, which means the
       // value cannot be obtained without a reference to the Slot object.
-      if (context.slots.has(this)) {
+      if (slotId in context.slots) {
         if (context !== currentContext) {
           // Cache the value in currentContext.slots so the next lookup will
           // be faster. This caching is safe because the tree of contexts and
           // the values of the slots are logically immutable.
-          currentContext!.slots.set(this, context.slots.get(this));
+          currentContext!.slots[slotId] = context.slots[slotId];
         }
         return true;
       }
@@ -25,7 +37,7 @@ export class Slot<TValue> {
 
   public getValue(): TValue | undefined {
     if (this.hasValue()) {
-      return currentContext!.slots.get(this) as TValue;
+      return currentContext!.slots[slotIdMap.get(this)!] as TValue;
     }
   }
 
@@ -34,8 +46,8 @@ export class Slot<TValue> {
     callback: () => TResult,
   ): TResult {
     const parent = currentContext;
-    const slots = new WeakMap<Slot<any>, any>();
-    slots.set(this, value);
+    const slots = Object.create(null);
+    slots[slotIdMap.get(this)!] = value;
     currentContext = { parent, slots };
     try {
       return callback();
