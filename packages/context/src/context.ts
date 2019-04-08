@@ -74,13 +74,18 @@ export class Slot<TValue> {
   }
 }
 
+const boundBrand: unique symbol = Symbol();
+
 // Capture the current context and wrap a callback function so that it
 // reestablishes the captured context when called.
 export function bind<TArgs extends any[], TResult>(
   callback: (...args: TArgs) => TResult,
 ) {
+  if ((callback as any)[boundBrand] === bind) {
+    return callback;
+  }
   const context = currentContext;
-  return function bound(this: any) {
+  const bound = function (this: any) {
     const saved = currentContext;
     try {
       currentContext = context;
@@ -88,7 +93,9 @@ export function bind<TArgs extends any[], TResult>(
     } finally {
       currentContext = saved;
     }
-  } as typeof callback;
+  };
+  (bound as any)[boundBrand] = bind;
+  return bound as typeof callback;
 }
 
 // Immediately run a callback function without any captured context.
