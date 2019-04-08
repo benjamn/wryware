@@ -121,15 +121,13 @@ export function asyncFromGen<TArgs extends any[], TResult>(
   genFn: (...args: TArgs) => IterableIterator<TResult>,
 ) {
   return function (this: any) {
-    const context = currentContext;
     const gen = genFn.apply(this, arguments as any);
     const next = bind(gen.next);
 
     return new Promise((resolve, reject) => {
       function pump(valueToSend?: any) {
-        let result: IteratorResult<TResult | PromiseLike<TResult>>;
         try {
-          result = next.call(gen, valueToSend);
+          var result = next.call(gen, valueToSend);
         } catch (error) {
           return reject(error);
         }
