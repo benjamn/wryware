@@ -4,6 +4,7 @@ import typescript from 'typescript';
 const globals = {
   __proto__: null,
   tslib: "tslib",
+  "@wry/context": "wryContext",
 };
 
 function external(id) {
