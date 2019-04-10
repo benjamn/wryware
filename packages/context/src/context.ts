@@ -1,73 +1,68 @@
 type Context = {
   parent: Context | null;
-  slots: { [slotId: number]: any };
+  slots: { [slotId: string]: any };
 }
 
 let currentContext: Context | null = null;
-
-const slotIdMap = new WeakMap<Slot<any>, number>();
-// Pull down the prototype methods that we use onto the slotIdMap instance
-// so that they can't be tampered with by malicious code.
-slotIdMap.set = slotIdMap.set;
-slotIdMap.get = slotIdMap.get;
-let nextSlotId = 1;
 
 // This unique internal object is used to denote the absence of a value
 // for a given Slot, and is never exposed to outside code.
 const MISSING_VALUE: any = {};
 
-// Returns the ID of the given slot if the slot has a value defined.
-// Caches the result in currentContext.slots for faster future lookups.
-function lookup(slot: Slot<any>): number | undefined {
-  const slotId = slotIdMap.get(slot)!;
-  for (let context = currentContext; context; context = context.parent) {
-    // We use the Slot object iself as a key to its value, which means the
-    // value cannot be obtained without a reference to the Slot object.
-    if (slotId in context.slots) {
-      const value = context.slots[slotId];
-      if (value === MISSING_VALUE) break;
-      if (context !== currentContext) {
-        // Cache the value in currentContext.slots so the next lookup will
-        // be faster. This caching is safe because the tree of contexts and
-        // the values of the slots are logically immutable.
-        currentContext!.slots[slotId] = value;
-      }
-      return slotId;
-    }
-  }
-  if (currentContext) {
-    // If a value was not found for this Slot, it's never going to be found
-    // no matter how many times we look it up, so we might as well cache
-    // the absence of the value, too.
-    currentContext.slots[slotId] = MISSING_VALUE;
-  }
+let idCounter = 1;
+function makeUniqueId(): string {
+  return ["slot", idCounter++, Date.now(), Math.random().toString(36).slice(2)].join(":");
 }
 
 export class Slot<TValue> {
-  constructor() {
-    slotIdMap.set(this, nextSlotId++);
+  // If you have a Slot object, you can find out its slot.id by circumventing
+  // TypeScript's privacy restrictions, but you can't guess the slot.id of a
+  // Slot you don't have access to, thanks to the randomized suffix.
+  private readonly id = makeUniqueId();
+
+  public hasValue() {
+    const { id } = this;
+    for (let context = currentContext; context; context = context.parent) {
+      // We use the Slot object iself as a key to its value, which means the
+      // value cannot be obtained without a reference to the Slot object.
+      if (id in context.slots) {
+        const value = context.slots[id];
+        if (value === MISSING_VALUE) break;
+        if (context !== currentContext) {
+          // Cache the value in currentContext.slots so the next lookup will
+          // be faster. This caching is safe because the tree of contexts and
+          // the values of the slots are logically immutable.
+          currentContext!.slots[id] = value;
+        }
+        return true;
+      }
+    }
+    if (currentContext) {
+      // If a value was not found for this Slot, it's never going to be found
+      // no matter how many times we look it up, so we might as well cache
+      // the absence of the value, too.
+      currentContext.slots[id] = MISSING_VALUE;
+    }
+    return false;
   }
 
-  public hasValue = (): boolean => !!lookup(this);
-
   public getValue = (): TValue | undefined => {
-    const slotId = lookup(this);
-    if (slotId) {
-      return currentContext!.slots[slotId] as TValue;
+    if (this.hasValue()) {
+      return currentContext!.slots[this.id] as TValue;
     }
   }
 
-  public withValue = <TResult, TArgs extends any[], TThis = any>(
+  public withValue<TResult, TArgs extends any[], TThis = any>(
     value: TValue,
     callback: (this: TThis, ...args: TArgs) => TResult,
     // Given the prevalence of arrow functions, specifying arguments is likely
     // to be much more common than specifying `this`, hence this ordering:
     args?: TArgs,
     thisArg?: TThis,
-  ): TResult => {
+  ): TResult {
     const slots = {
       __proto__: null,
-      [slotIdMap.get(this)!]: value,
+      [this.id]: value,
     };
     currentContext = { parent: currentContext, slots };
     try {
