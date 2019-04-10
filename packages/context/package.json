@@ -1,6 +1,6 @@
 {
   "name": "@wry/context",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "author": "Ben Newman <ben@eloper.dev>",
   "description": "Manage contextual information needed by (a)synchronous tasks without explicitly passing objects around",
   "license": "MIT",
