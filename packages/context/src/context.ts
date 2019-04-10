@@ -48,7 +48,7 @@ export class Slot<TValue> {
     return false;
   }
 
-  public getValue = (): TValue | undefined => {
+  public getValue(): TValue | undefined {
     if (this.hasValue()) {
       return currentContext!.slots[this.id] as TValue;
     }
