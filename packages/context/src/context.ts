@@ -10,15 +10,17 @@ let currentContext: Context | null = null;
 const MISSING_VALUE: any = {};
 
 let idCounter = 1;
-function makeUniqueId(): string {
-  return ["slot", idCounter++, Date.now(), Math.random().toString(36).slice(2)].join(":");
-}
 
 export class Slot<TValue> {
   // If you have a Slot object, you can find out its slot.id by circumventing
   // TypeScript's privacy restrictions, but you can't guess the slot.id of a
   // Slot you don't have access to, thanks to the randomized suffix.
-  private readonly id = makeUniqueId();
+  private readonly id = [
+    "slot",
+    idCounter++,
+    Date.now(),
+    Math.random().toString(36).slice(2),
+  ].join(":");
 
   public hasValue() {
     const { id } = this;
