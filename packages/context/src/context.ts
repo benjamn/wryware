@@ -57,9 +57,13 @@ export class Slot<TValue> {
     }
   }
 
-  public withValue = <TResult>(
+  public withValue = <TResult, TArgs extends any[], TThis = any>(
     value: TValue,
-    callback: () => TResult,
+    callback: (this: TThis, ...args: TArgs) => TResult,
+    // Given the prevalence of arrow functions, specifying arguments is likely
+    // to be much more common than specifying `this`, hence this ordering:
+    args?: TArgs,
+    thisArg?: TThis,
   ): TResult => {
     const slots = {
       __proto__: null,
@@ -67,7 +71,9 @@ export class Slot<TValue> {
     };
     currentContext = { parent: currentContext, slots };
     try {
-      return callback();
+      // Function.prototype.apply allows the arguments array argument to be
+      // omitted or undefined, so args! is fine here.
+      return callback.apply(thisArg!, args!);
     } finally {
       currentContext = currentContext.parent;
     }
@@ -99,11 +105,19 @@ export function bind<TArgs extends any[], TResult>(
 }
 
 // Immediately run a callback function without any captured context.
-export function noContext<TResult>(callback: () => TResult) {
+export function noContext<TResult, TArgs extends any[], TThis = any>(
+  callback: (this: TThis, ...args: TArgs) => TResult,
+  // Given the prevalence of arrow functions, specifying arguments is likely
+  // to be much more common than specifying `this`, hence this ordering:
+  args?: TArgs,
+  thisArg?: TThis,
+) {
   const saved = currentContext;
   try {
     currentContext = null;
-    return callback();
+    // Function.prototype.apply allows the arguments array argument to be
+    // omitted or undefined, so args! is fine here.
+    return callback.apply(thisArg!, args!);
   } finally {
     currentContext = saved;
   }

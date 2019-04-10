@@ -207,6 +207,39 @@ describe("noContext", function () {
     assert.strictEqual(slot.hasValue(), false);
     assert.strictEqual(bound(), "oyez");
   });
+
+  it("permits passing arguments and this", function () {
+    const slot = new Slot<number>();
+    const self = {};
+    const notSelf = {};
+    const result = slot.withValue(1, function (a: number) {
+      assert.strictEqual(slot.hasValue(), true);
+      assert.strictEqual(slot.getValue(), 1);
+      assert.strictEqual(this, self);
+      return noContext(function (b: number) {
+        assert.strictEqual(slot.hasValue(), false);
+        assert.strictEqual(this, notSelf);
+        return slot.withValue(b, (aArg, bArg) => {
+          assert.strictEqual(slot.hasValue(), true);
+          assert.strictEqual(slot.getValue(), b);
+          assert.strictEqual(this, notSelf);
+          assert.strictEqual(a, aArg);
+          assert.strictEqual(b, bArg);
+          return aArg * bArg;
+        }, [a, b], self);
+      }, [3], notSelf);
+    }, [2], self);
+    assert.strictEqual(result, 2 * 3);
+  });
+
+  it("works with Array-like (arguments) objects", function () {
+    function multiply(a: number, b: number) {
+      return noContext(function inner(a, b) {
+        return a * b;
+      }, arguments as any);
+    }
+    assert.strictEqual(multiply(3, 7) * 2, 42);
+  });
 });
 
 describe("setTimeout", function () {
