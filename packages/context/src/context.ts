@@ -110,14 +110,18 @@ export function noContext<TResult, TArgs extends any[], TThis = any>(
   args?: TArgs,
   thisArg?: TThis,
 ) {
-  const saved = currentContext;
-  try {
-    currentContext = null;
-    // Function.prototype.apply allows the arguments array argument to be
-    // omitted or undefined, so args! is fine here.
+  if (currentContext) {
+    const saved = currentContext;
+    try {
+      currentContext = null;
+      // Function.prototype.apply allows the arguments array argument to be
+      // omitted or undefined, so args! is fine here.
+      return callback.apply(thisArg!, args!);
+    } finally {
+      currentContext = saved;
+    }
+  } else {
     return callback.apply(thisArg!, args!);
-  } finally {
-    currentContext = saved;
   }
 }
 
