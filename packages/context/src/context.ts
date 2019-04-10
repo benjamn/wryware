@@ -166,16 +166,23 @@ function isPromiseLike(value: any): value is PromiseLike<any> {
 // If you use the fibers npm package to implement coroutines in Node.js,
 // you should call this function at least once to ensure context management
 // remains coherent across any yields.
-export function wrapYieldingFiberMethods(Fiber: any) {
-  function wrap(obj: any, method: string) {
-    const fn = obj[method];
-    obj[method] = function () {
-      return noContext(fn, arguments as any, this);
-    };
+const wrappedFibers: Function[] = [];
+export function wrapYieldingFiberMethods<F extends Function>(Fiber: F): F {
+  // There can be only one implementation of Fiber per process, so this array
+  // should never grow longer than one element.
+  if (wrappedFibers.indexOf(Fiber) < 0) {
+    const wrap = (obj: any, method: string) => {
+      const fn = obj[method];
+      obj[method] = function () {
+        return noContext(fn, arguments as any, this);
+      };
+    }
+    // These methods can yield, according to
+    // https://github.com/laverdet/node-fibers/blob/ddebed9b8ae3883e57f822e2108e6943e5c8d2a8/fibers.js#L97-L100
+    wrap(Fiber, "yield");
+    wrap(Fiber.prototype, "run");
+    wrap(Fiber.prototype, "throwInto");
+    wrappedFibers.push(Fiber);
   }
-  // These methods can yield, according to
-  // https://github.com/laverdet/node-fibers/blob/ddebed9b8ae3883e57f822e2108e6943e5c8d2a8/fibers.js#L97-L100
-  wrap(Fiber, "yield");
-  wrap(Fiber.prototype, "run");
-  wrap(Fiber.prototype, "throwInto");
+  return Fiber;
 }
