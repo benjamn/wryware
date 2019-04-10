@@ -66,13 +66,14 @@ export class Slot<TValue> {
       __proto__: null,
       [this.id]: value,
     };
-    currentContext = { parent: currentContext, slots };
+    const parent = currentContext;
+    currentContext = { parent, slots };
     try {
       // Function.prototype.apply allows the arguments array argument to be
       // omitted or undefined, so args! is fine here.
       return callback.apply(thisArg!, args!);
     } finally {
-      currentContext = currentContext.parent;
+      currentContext = parent;
     }
   }
 }
