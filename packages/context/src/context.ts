@@ -138,23 +138,27 @@ export function asyncFromGen<TArgs extends any[], TResult>(
 ) {
   return function (this: any) {
     const gen = genFn.apply(this, arguments as any);
-    const next = bind(gen.next);
+    const boundNext = bind(gen.next);
+    const boundThrow = bind(gen.throw!);
+    type Method = typeof boundNext | typeof boundThrow;
 
-    return new Promise((resolve, reject) => {
-      function pump(valueToSend?: any) {
+    return new Promise<TResult>((resolve, reject) => {
+      function invoke(method: Method, argument: any) {
         try {
-          var result = next.call(gen, valueToSend);
+          var result = method.call(gen, argument);
         } catch (error) {
           return reject(error);
         }
-        const step = result.done ? resolve : pump;
+        const next = result.done ? resolve : invokeNext;
         if (isPromiseLike(result.value)) {
-          result.value.then(step, reject);
+          result.value.then(next, result.done ? reject : invokeThrow);
         } else {
-          step(result.value);
+          next(result.value);
         }
       }
-      pump();
+      const invokeNext = (value?: any) => invoke(boundNext, value);
+      const invokeThrow = (error: any) => invoke(boundThrow, error);
+      invokeNext();
     });
   } as (...args: TArgs) => Promise<TResult>;
 }

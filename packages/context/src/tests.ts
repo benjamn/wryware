@@ -395,4 +395,19 @@ describe("asyncFromGen", function () {
       ]);
     });
   });
+
+  it("allows Promise rejections to be caught", function () {
+    const fn = asyncFromGen(function*() {
+      try {
+        yield Promise.reject(new Error("expected"));
+      } catch (error) {
+        assert.strictEqual(error.message, "expected");
+      }
+      return "ok";
+    });
+
+    return fn().then(result => {
+      assert.strictEqual(result, "ok");
+    });
+  });
 });
