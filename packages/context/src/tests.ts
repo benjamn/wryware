@@ -400,6 +400,7 @@ describe("asyncFromGen", function () {
     const fn = asyncFromGen(function*() {
       try {
         yield Promise.reject(new Error("expected"));
+        throw new Error("not reached");
       } catch (error) {
         assert.strictEqual(error.message, "expected");
       }
