@@ -81,6 +81,63 @@ describe("Slot", function () {
     assert.strictEqual(oneWay, otherWay);
     assert.strictEqual(oneWay, "oyezoyezoyez");
   });
+
+  it("is a singleton", function () {
+    const cjsSlotModule = require("../lib/slot.js");
+    assert.ok(new Slot<number>() instanceof cjsSlotModule.Slot);
+    assert.ok(new cjsSlotModule.Slot() instanceof Slot);
+    assert.strictEqual(cjsSlotModule.Slot, Slot);
+    assert.strictEqual((Array as any)["@wry/context:Slot"], Slot);
+    assert.deepEqual(Object.keys(Array), []);
+  });
+
+  it("can be subclassed", function () {
+    class NamedSlot extends Slot<number> {
+      constructor(public readonly name: string) {
+        super();
+        (this as any).id = name + ":" + this.id;
+      }
+    }
+
+    const ageSlot = new NamedSlot("age");
+    assert.strictEqual(ageSlot.hasValue(), false);
+    ageSlot.withValue(87, () => {
+      assert.strictEqual(ageSlot.hasValue(), true);
+      const age = ageSlot.getValue()!;
+      assert.strictEqual(age, 87);
+      assert.strictEqual(ageSlot.name, "age");
+      assert.ok(ageSlot.id.startsWith("age:slot:"));
+    });
+
+    class DefaultSlot<T> extends Slot<T> {
+      constructor(public readonly defaultValue: T) {
+        super();
+      }
+
+      hasValue() {
+        return true;
+      }
+
+      getValue() {
+        return super.hasValue() ? super.getValue() : this.defaultValue;
+      }
+    }
+
+    const defaultSlot = new DefaultSlot("default");
+    assert.strictEqual(defaultSlot.hasValue(), true);
+    assert.strictEqual(defaultSlot.getValue(), "default");
+    const check = defaultSlot.withValue("real", function () {
+      assert.strictEqual(defaultSlot.hasValue(), true);
+      assert.strictEqual(defaultSlot.getValue(), "real");
+      return bind(function () {
+        assert.strictEqual(defaultSlot.hasValue(), true);
+        assert.strictEqual(defaultSlot.getValue(), "real");
+      });
+    });
+    assert.strictEqual(defaultSlot.hasValue(), true);
+    assert.strictEqual(defaultSlot.getValue(), "default");
+    check();
+  });
 });
 
 describe("bind", function () {
