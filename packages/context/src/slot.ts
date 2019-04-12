@@ -143,7 +143,6 @@ export const Slot: ReturnType<typeof makeSlotClass> = host[globalKey] || functio
       writable: false,
       configurable: false,
     });
-    Object.freeze(Object.freeze(Slot).prototype);
   } finally {
     return Slot;
   }
