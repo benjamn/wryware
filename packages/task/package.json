@@ -23,13 +23,18 @@
     "url": "https://github.com/benjamn/wryware/issues"
   },
   "scripts": {
-    "clean": "../../node_modules/.bin/rimraf lib",
     "tsc": "../../node_modules/.bin/tsc",
+    "clean": "../../node_modules/.bin/rimraf lib",
     "rollup": "../../node_modules/.bin/rollup -c",
-    "build": "npm run clean && npm run tsc && npm run rollup",
+    "build": "npm run tsc",
+    "build:test": "npm run tsc -- --project ./tsconfig.test.json",
+    "prebuild": "npm run clean",
+    "postbuild": "npm run rollup",
+    "prebuild:test": "npm run prebuild",
+    "postbuild:test": "npm run postbuild",
     "mocha": "../../scripts/test.sh lib/tests.js",
     "prepublish": "npm run build",
-    "test": "npm run build && npm run mocha"
+    "test": "npm run build:test && npm run mocha"
   },
   "dependencies": {
     "@wry/context": "file:../context",

@@ -5,8 +5,8 @@
     "importHelpers": true,
     "declaration": true,
     "sourceMap": true,
-    "lib": ["es2015"],
-    "types": ["node", "mocha"],
+    "lib": ["es2015", "dom"],
+    "types": [],
     "strict": true,
     "noImplicitAny": true,
     "esModuleInterop": true
