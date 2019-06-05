@@ -13,8 +13,8 @@
   "devDependencies": {
     "@types/mocha": "^5.2.6",
     "@types/node": ">=6",
-    "lerna": "^3.13.1",
-    "mocha": "^6.0.2",
+    "lerna": "^3.14.1",
+    "mocha": "^6.1.4",
     "rimraf": "^2.6.3",
     "rollup": "^1.12.3",
     "rollup-plugin-typescript2": "^0.20.1",
