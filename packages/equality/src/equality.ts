@@ -37,19 +37,7 @@ class Checker {
         }
         // Fall through to object case...
       case '[object Object]':
-        return this.withCycleGuard(a, b, () => {
-          const aKeys = Object.keys(a);
-          const bKeys = Object.keys(b);
-          return (
-            // If `a` and `b` have a different number of enumerable keys, they
-            // must be different.
-            aKeys.length === bKeys.length &&
-            // Now make sure they have the same keys.
-            bKeys.every(key => hasOwnProperty.call(a, key)) &&
-            // Finally, check deep equality of all child properties.
-            aKeys.every(key => this.check(a[key], b[key]))
-          );
-        });
+        return this.withCycleGuard(a, b, this.checkObject);
 
       case '[object Error]':
         return a.name === b.name && a.message === b.message;
@@ -68,37 +56,8 @@ class Checker {
 
       case '[object Map]':
       case '[object Set]': {
-        if (a.size !== b.size) {
-          return false;
-        }
-
-        return this.withCycleGuard(a, b, () => {
-          const aIterator = (a as Set<any> | Map<any, any>).entries();
-
-          while (true) {
-            const info = aIterator.next();
-            if (info.done) break;
-
-            // If a instanceof Set, aValue === aKey.
-            const [aKey, aValue] = info.value;
-
-            // So this works the same way for both Set and Map.
-            if (!b.has(aKey)) {
-              return false;
-            }
-
-            if (
-              // However, we care about deep equality of values only when dealing
-              // with Map structures.
-              aTag === '[object Map]' &&
-              !this.check(aValue, b.get(aKey))
-            ) {
-              return false;
-            }
-          }
-
-          return true;
-        });
+        if (a.size !== b.size) return false;
+        return this.withCycleGuard(a, b, this.checkMapOrSet);
       }
     }
 
@@ -106,7 +65,11 @@ class Checker {
     return false;
   }
 
-  private withCycleGuard(a: any, b: any, callback: () => boolean): boolean {
+  private withCycleGuard<A, B>(
+    a: A,
+    b: B,
+    callback: (this: Checker, a: A, b: B) => boolean,
+  ): boolean {
     // Although we may detect cycles at different depths along the same
     // path, once the first object enters a cycle of length N, every nested
     // child of that object will also be identical to its Nth ancestor, so
@@ -129,11 +92,53 @@ class Checker {
     this.bStack.push(b);
 
     try {
-      return callback();
+      return callback.call(this, a, b);
     } finally {
       this.aStack.pop();
       this.bStack.pop();
     }
+  }
+
+  private checkObject<T extends { [key: string]: any }>(a: T, b: T) {
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    return (
+      // If `a` and `b` have a different number of enumerable keys, they
+      // must be different.
+      aKeys.length === bKeys.length &&
+      // Now make sure they have the same keys.
+      bKeys.every(key => hasOwnProperty.call(a, key)) &&
+      // Finally, check deep equality of all child properties.
+      aKeys.every(key => this.check(a[key], b[key]))
+    );
+  }
+
+  private checkMapOrSet<T extends Set<any> | Map<any, any>>(a: T, b: T) {
+    const aIterator = a.entries();
+
+    while (true) {
+      const info = aIterator.next();
+      if (info.done) break;
+
+      // If a instanceof Set, aValue === aKey.
+      const [aKey, aValue] = info.value;
+
+      // So this works the same way for both Set and Map.
+      if (!b.has(aKey)) {
+        return false;
+      }
+
+      if (
+        // However, we care about deep equality of values only when dealing
+        // with Map structures.
+        b instanceof Map &&
+        !this.check(aValue, b.get(aKey))
+      ) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }
 
