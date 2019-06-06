@@ -32,9 +32,7 @@ class Checker {
       case '[object Array]':
         // Arrays are a lot like other objects, but we can cheaply compare their
         // lengths as a short-cut before comparing their elements.
-        if (a.length !== b.length) {
-          return false;
-        }
+        if (a.length !== b.length) return false;
         // Fall through to object case...
       case '[object Object]':
         return this.withCycleGuard(a, b, this.checkObject);
