@@ -1,6 +1,6 @@
 {
   "name": "@wry/equality",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "author": "Ben Newman <ben@eloper.dev>",
   "description": "Structural equality checking for JavaScript values",
   "license": "MIT",
