@@ -35,7 +35,7 @@ function equalHelper(a: any, b: any, aStack: any[], bStack: any[]): boolean {
       if (a.length !== b.length) {
         return false;
       }
-      // fall through to object case...
+      // Fall through to object case...
     case '[object Object]':
       return withCycleGuard(a, b, aStack, bStack, () => {
         const aKeys = Object.keys(a);
@@ -54,15 +54,12 @@ function equalHelper(a: any, b: any, aStack: any[], bStack: any[]): boolean {
     case '[object Error]':
       return a.name === b.name && a.message === b.message;
 
-    case '[object Boolean]':
-      return !a === !b;
-
-    case '[object Date]':
-      return a.getTime() === b.getTime();
-
     case '[object Number]':
       // Handle NaN, which is !== itself.
       if (a !== a) return b !== b;
+      // Fall through to shared +a === +b case...
+    case '[object Boolean]':
+    case '[object Date]':
       return +a === +b;
 
     case '[object RegExp]':

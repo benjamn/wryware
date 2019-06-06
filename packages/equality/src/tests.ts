@@ -36,6 +36,7 @@ describe("equality", function () {
 
     assertEqual(123, new Number(123));
     assertEqual(true, new Boolean(true));
+    assertEqual(false, new Boolean(false));
     assertEqual("oyez", new String("oyez"));
   });
 
