@@ -1,18 +1,14 @@
 const { toString, hasOwnProperty } = Object.prototype;
 
-/**
- * Performs a deep equality check on two JavaScript values, tolerating cycles.
- */
-export function equal(a: any, b: any): boolean {
-  return new Checker().check(a, b);
-}
-
-// Allow default imports as well.
-export default equal;
-
 class Checker {
   private aStack: any[] = [];
   private bStack: any[] = [];
+
+  public reset() {
+    this.aStack.length = 0;
+    this.bStack.length = 0;
+    return this;
+  }
 
   public check(a: any, b: any): boolean {
     // If the two values are strictly equal, our job is easy.
@@ -140,3 +136,15 @@ class Checker {
     }
   }
 }
+
+const checker = new Checker();
+
+/**
+ * Performs a deep equality check on two JavaScript values, tolerating cycles.
+ */
+export function equal(a: any, b: any): boolean {
+  return checker.reset().check(a, b);
+}
+
+// Allow default imports as well.
+export default equal;
