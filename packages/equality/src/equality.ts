@@ -100,15 +100,28 @@ class Checker {
   private checkObject<T extends { [key: string]: any }>(a: T, b: T) {
     const aKeys = Object.keys(a);
     const bKeys = Object.keys(b);
-    return (
-      // If `a` and `b` have a different number of enumerable keys, they
-      // must be different.
-      aKeys.length === bKeys.length &&
-      // Now make sure they have the same keys.
-      bKeys.every(key => hasOwnProperty.call(a, key)) &&
-      // Finally, check deep equality of all child properties.
-      aKeys.every(key => this.check(a[key], b[key]))
-    );
+
+    // If `a` and `b` have a different number of enumerable keys, they
+    // must be different.
+    const keyCount = aKeys.length;
+    if (keyCount !== bKeys.length) return false;
+
+    // Now make sure they have the same keys.
+    for (let k = 0; k < keyCount; ++k) {
+      if (!hasOwnProperty.call(b, aKeys[k])) {
+        return false;
+      }
+    }
+
+    // Finally, check deep equality of all child properties.
+    for (let k = 0; k < keyCount; ++k) {
+      const key = aKeys[k];
+      if (!this.check(a[key], b[key])) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private checkMapOrSet<T extends Set<any> | Map<any, any>>(a: T, b: T) {
