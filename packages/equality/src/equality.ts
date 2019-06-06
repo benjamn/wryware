@@ -113,6 +113,7 @@ class Checker {
 
   private checkMapOrSet<T extends Set<any> | Map<any, any>>(a: T, b: T) {
     const aIterator = a.entries();
+    const isMap = b instanceof Map;
 
     while (true) {
       const info = aIterator.next();
@@ -126,12 +127,9 @@ class Checker {
         return false;
       }
 
-      if (
-        // However, we care about deep equality of values only when dealing
-        // with Map structures.
-        b instanceof Map &&
-        !this.check(aValue, b.get(aKey))
-      ) {
+      // However, we care about deep equality of values only when dealing
+      // with Map structures.
+      if (isMap && !this.check(aValue, (b as Map<any, any>).get(aKey))) {
         return false;
       }
     }
