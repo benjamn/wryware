@@ -17,7 +17,7 @@ export default [{
   output: {
     file: "lib/task.esm.js",
     format: "esm",
-    sourceMap: true,
+    sourcemap: true,
     globals,
   },
   plugins: [

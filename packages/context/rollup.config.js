@@ -16,7 +16,7 @@ export default [{
   output: {
     file: "lib/context.esm.js",
     format: "esm",
-    sourceMap: true,
+    sourcemap: true,
     globals,
   },
   plugins: [
