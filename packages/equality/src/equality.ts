@@ -1,4 +1,5 @@
 const { toString, hasOwnProperty } = Object.prototype;
+const previousComparisons = new Map<object, Set<object>>();
 
 /**
  * Performs a deep equality check on two JavaScript values, tolerating cycles.
@@ -117,9 +118,7 @@ function check(a: any, b: any): boolean {
   return false;
 }
 
-const previousComparisons = new Map<any, Set<any>>();
-
-function previouslyCompared(a: any, b: any): boolean {
+function previouslyCompared(a: object, b: object): boolean {
   // Though cyclic references can make an object graph appear infinite from the
   // perspective of a depth-first traversal, the graph still contains a finite
   // number of distinct object references. We use the previousComparisons cache
