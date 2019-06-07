@@ -1,10 +1,5 @@
 const { toString, hasOwnProperty } = Object.prototype;
 
-// We use this cache to avoid comparing the same pair of object references more
-// than once. It can be declared here because we clear it after each equality
-// check, and the checks cannot overlap.
-const previousComparisons = new Map<any, Set<any>>();
-
 /**
  * Performs a deep equality check on two JavaScript values, tolerating cycles.
  */
@@ -43,8 +38,34 @@ function check(a: any, b: any): boolean {
       // lengths as a short-cut before comparing their elements.
       if (a.length !== b.length) return false;
       // Fall through to object case...
-    case '[object Object]':
-      return withCycleGuard(a, b, checkObject);
+    case '[object Object]': {
+      if (previouslyCompared(a, b)) return true;
+
+      const aKeys = Object.keys(a);
+      const bKeys = Object.keys(b);
+
+      // If `a` and `b` have a different number of enumerable keys, they
+      // must be different.
+      const keyCount = aKeys.length;
+      if (keyCount !== bKeys.length) return false;
+
+      // Now make sure they have the same keys.
+      for (let k = 0; k < keyCount; ++k) {
+        if (!hasOwnProperty.call(b, aKeys[k])) {
+          return false;
+        }
+      }
+
+      // Finally, check deep equality of all child properties.
+      for (let k = 0; k < keyCount; ++k) {
+        const key = aKeys[k];
+        if (!check(a[key], b[key])) {
+          return false;
+        }
+      }
+
+      return true;
+    }
 
     case '[object Error]':
       return a.name === b.name && a.message === b.message;
@@ -64,7 +85,31 @@ function check(a: any, b: any): boolean {
     case '[object Map]':
     case '[object Set]': {
       if (a.size !== b.size) return false;
-      return withCycleGuard(a, b, checkMapOrSet);
+      if (previouslyCompared(a, b)) return true;
+
+      const aIterator = a.entries();
+      const isMap = aTag === '[object Map]';
+
+      while (true) {
+        const info = aIterator.next();
+        if (info.done) break;
+
+        // If a instanceof Set, aValue === aKey.
+        const [aKey, aValue] = info.value;
+
+        // So this works the same way for both Set and Map.
+        if (!b.has(aKey)) {
+          return false;
+        }
+
+        // However, we care about deep equality of values only when dealing
+        // with Map structures.
+        if (isMap && !check(aValue, b.get(aKey))) {
+          return false;
+        }
+      }
+
+      return true;
     }
   }
 
@@ -72,11 +117,9 @@ function check(a: any, b: any): boolean {
   return false;
 }
 
-function withCycleGuard<A, B>(
-  a: A,
-  b: B,
-  callback: (a: A, b: B) => boolean,
-): boolean {
+const previousComparisons = new Map<any, Set<any>>();
+
+function previouslyCompared(a: any, b: any): boolean {
   // Though cyclic references can make an object graph appear infinite from the
   // perspective of a depth-first traversal, the graph still contains a finite
   // number of distinct object references. We use the previousComparisons cache
@@ -85,68 +128,14 @@ function withCycleGuard<A, B>(
   // graph to every object in the other graph, which is extremely unlikely),
   // while still allowing weird isomorphic structures (like rings with different
   // lengths) a chance to pass the equality test.
-  const bs = previousComparisons.get(a);
-  if (bs) {
+  let bSet = previousComparisons.get(a);
+  if (bSet) {
     // Return true here because we can be sure false will be returned somewhere
     // else if the objects are not equivalent.
-    if (bs.has(b)) return true;
-    bs.add(b);
+    if (bSet.has(b)) return true;
   } else {
-    previousComparisons.set(a, new Set().add(b));
+    previousComparisons.set(a, bSet = new Set);
   }
-
-  return callback(a, b);
-}
-
-function checkObject<T extends { [key: string]: any }>(a: T, b: T) {
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
-
-  // If `a` and `b` have a different number of enumerable keys, they
-  // must be different.
-  const keyCount = aKeys.length;
-  if (keyCount !== bKeys.length) return false;
-
-  // Now make sure they have the same keys.
-  for (let k = 0; k < keyCount; ++k) {
-    if (!hasOwnProperty.call(b, aKeys[k])) {
-      return false;
-    }
-  }
-
-  // Finally, check deep equality of all child properties.
-  for (let k = 0; k < keyCount; ++k) {
-    const key = aKeys[k];
-    if (!check(a[key], b[key])) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function checkMapOrSet<T extends Set<any> | Map<any, any>>(a: T, b: T) {
-  const aIterator = a.entries();
-  const isMap = b instanceof Map;
-
-  while (true) {
-    const info = aIterator.next();
-    if (info.done) break;
-
-    // If a instanceof Set, aValue === aKey.
-    const [aKey, aValue] = info.value;
-
-    // So this works the same way for both Set and Map.
-    if (!b.has(aKey)) {
-      return false;
-    }
-
-    // However, we care about deep equality of values only when dealing
-    // with Map structures.
-    if (isMap && !check(aValue, (b as Map<any, any>).get(aKey))) {
-      return false;
-    }
-  }
-
-  return true;
+  bSet.add(b);
+  return false;
 }
