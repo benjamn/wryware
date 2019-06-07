@@ -192,7 +192,7 @@ describe("equality", function () {
     ring1.self.self.self.self = ring1;
     const ring2 = { self: { self: {} as any }};
     ring2.self.self.self = ring2;
-    assertNotEqual(ring1, ring2);
+    assertEqual(ring1, ring2);
 
     ring1.self.self.self.self = ring1.self;
     assertEqual(ring1, ring2);

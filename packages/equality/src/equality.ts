@@ -1,24 +1,23 @@
 const { toString, hasOwnProperty } = Object.prototype;
 
+// We use this cache to avoid comparing the same pair of object references more
+// than once. It can be declared here because we clear it after each equality
+// check, and the checks cannot overlap.
+const previousComparisons = new Map<any, Set<any>>();
+
 /**
  * Performs a deep equality check on two JavaScript values, tolerating cycles.
  */
 export function equal(a: any, b: any): boolean {
-  // Emptying aStack and bStack should never really be necessary, since pushing
-  // and popping is always balanced in withCycleGuard, but it never hurts to
-  // make absolutely sure.
-  aStack.length = bStack.length = 0;
-  return check(a, b);
+  try {
+    return check(a, b);
+  } finally {
+    previousComparisons.clear();
+  }
 }
 
 // Allow default imports as well.
 export default equal;
-
-// These stacks are used to detect cyclic references while traversing objects.
-// They can be declared here because they always end up empty again after the
-// traversal is complete (even if an exception was thrown).
-const aStack: any[] = [];
-const bStack: any[] = [];
 
 function check(a: any, b: any): boolean {
   // If the two values are strictly equal, our job is easy.
@@ -78,33 +77,25 @@ function withCycleGuard<A, B>(
   b: B,
   callback: (a: A, b: B) => boolean,
 ): boolean {
-  // Although we may detect cycles at different depths along the same
-  // path, once the first object enters a cycle of length N, every nested
-  // child of that object will also be identical to its Nth ancestor, so
-  // we can safely keep recursing until the other object enters a cycle of
-  // length M. If the other object does not have a cycle in this subtree,
-  // the recursion will terminate normally, and equal(a, b) will return
-  // false. If the other object has a cycle, and N === M, we consider the
-  // cycles equivalent. If N !== M, there's a chance the cycles are
-  // somehow isomorphic, but as a matter of policy we say they are not the
-  // same because their structures are, in fact, different.
-  const aIndex = aStack.lastIndexOf(a);
-  if (aIndex >= 0) {
-    const bIndex = bStack.lastIndexOf(b);
-    if (bIndex >= 0) {
-      return aIndex === bIndex;
-    }
+  // Though cyclic references can make an object graph appear infinite from the
+  // perspective of a depth-first traversal, the graph still contains a finite
+  // number of distinct object references. We use the previousComparisons cache
+  // to avoid comparing the same pair of object references more than once, which
+  // guarantees termination (even if we end up comparing every object in one
+  // graph to every object in the other graph, which is extremely unlikely),
+  // while still allowing weird isomorphic structures (like rings with different
+  // lengths) a chance to pass the equality test.
+  const bs = previousComparisons.get(a);
+  if (bs) {
+    // Return true here because we can be sure false will be returned somewhere
+    // else if the objects are not equivalent.
+    if (bs.has(b)) return true;
+    bs.add(b);
+  } else {
+    previousComparisons.set(a, new Set().add(b));
   }
 
-  aStack.push(a);
-  bStack.push(b);
-
-  try {
-    return callback(a, b);
-  } finally {
-    aStack.pop();
-    bStack.pop();
-  }
+  return callback(a, b);
 }
 
 function checkObject<T extends { [key: string]: any }>(a: T, b: T) {
