@@ -145,4 +145,19 @@ describe("Task", function () {
       });
     });
   });
+
+  it("task.toPromise() always returns the same promise", function () {
+    const syncTask = Task.resolve("whatever");
+    const promise1 = syncTask.toPromise();
+
+    const asyncTask = Task.resolve(Promise.resolve("whenever"));
+    const promise2 = asyncTask.toPromise();
+
+    return promise1.then(() => {
+      return promise2.then(() => {
+        assert.strictEqual(promise1, syncTask.toPromise());
+        assert.strictEqual(promise2, asyncTask.toPromise());
+      });
+    });
+  });
 });
