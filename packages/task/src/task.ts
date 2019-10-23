@@ -14,13 +14,16 @@ function isPromiseLike(value: any): value is PromiseLike<any> {
 // A Task is a deliberately stripped-down Promise-compatible abstraction
 // with a few notable differences:
 //
-// 1. Settled Tasks can fire .then callbacks synchronously. If you've ever
-//    tried to extract code containing conditional await expressions from
-//    an async function, you will realize that the precise internal timing
-//    of asynchronous code sometimes requires synchronous delivery of
+// 1. Settled Tasks can fire .then callbacks synchronously, as long as the
+//    result (or rejection) is immediately available, and the Task has not
+//    delivered its result asynchronously before.
+//
+//    If you've ever tried to extract code containing conditional await
+//    expressions from an async function, you know that the precise internal
+//    timing of asynchronous code sometimes requires synchronous delivery of
 //    results. Don't get me wrong: I'm a huge fan of the always-async
-//    consistency of the Promise API, but it simply isn't flexible enough
-//    to support certain patterns, especially when working with Observables,
+//    consistency of the Promise API, but it simply isn't flexible enough to
+//    support certain patterns, especially when working with Observables,
 //    which also have the ability to deliver results synchronously.
 //
 // 2. Tasks expose their .resolve and .reject methods publicly, so you can
@@ -38,8 +41,9 @@ export class Task<TResult> implements PromiseLike<TResult> {
   // always wins, even if the argument is a Task/Promise/thenable that needs
   // to be resolved.
   public readonly resolve =
-    (result: TResult | PromiseLike<TResult>) => this.settle(State.RESOLVED, result);
-  public readonly reject = (reason: any) => this.settle(State.REJECTED, reason);
+    (result?: TResult | PromiseLike<TResult>) => this.settle(State.RESOLVED, result);
+  public readonly reject =
+    (reason?: any) => this.settle(State.REJECTED, reason);
 
   private state: State = State.UNSETTLED;
   private resultOrError?: any;
@@ -73,24 +77,24 @@ export class Task<TResult> implements PromiseLike<TResult> {
     onResolved?: ((value: TResult) => A | PromiseLike<A>) | null,
     onRejected?: ((reason: any) => B | PromiseLike<B>) | null,
   ): Task<A | B> {
-    switch (this.state) {
-      case State.UNSETTLED:
-      case State.SETTLING:
-        return Task.resolve(this.toPromise().then(
-          onResolved && bind(onResolved),
-          onRejected && bind(onRejected),
-        ));
-
-      case State.RESOLVED:
+    if (!this.promise) {
+      if (this.state === State.RESOLVED) {
         return new Task<any>(task => task.resolve(
           onResolved ? onResolved(this.resultOrError) : this.resultOrError,
         ));
+      }
 
-      case State.REJECTED:
+      if (this.state === State.REJECTED) {
         return new Task<any>(task => task.resolve(
           onRejected ? onRejected(this.resultOrError) : this.resultOrError,
         ));
+      }
     }
+
+    return Task.resolve(this.toPromise().then(
+      onResolved && bind(onResolved),
+      onRejected && bind(onRejected),
+    ));
   }
 
   public catch<T>(onRejected: (reason: any) => T | PromiseLike<T>) {

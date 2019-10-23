@@ -84,4 +84,59 @@ describe("Task", function () {
       assert.strictEqual(d, "not a task");
     })
   });
+
+  it("should deliver synchronous results consistently", function () {
+    const syncTask = new Task(task => {
+      return Task.resolve("oyez").then(result => {
+        task.resolve(result.toUpperCase());
+      });
+    });
+
+    let delivered = false;
+    syncTask.then(result => {
+      assert.strictEqual(result, "OYEZ");
+      assert.strictEqual(delivered, false);
+      delivered = true;
+    });
+    assert.strictEqual(delivered, true);
+
+    let deliveredAgain = false;
+    syncTask.then(result => {
+      assert.strictEqual(result, "OYEZ");
+      assert.strictEqual(deliveredAgain, false);
+      deliveredAgain = true;
+    });
+    assert.strictEqual(deliveredAgain, true);
+  });
+
+  it("should deliver asynchronous results consistently", function () {
+    let delivered = false;
+    const asyncTask = new Task<number>(task => {
+      Promise.resolve(1234).then(result => {
+        task.resolve(result);
+      });
+    }).then(result => {
+      assert.strictEqual(result, 1234);
+      assert.strictEqual(delivered, false);
+      delivered = true;
+      return result + 1111;
+    });
+    assert.strictEqual(delivered, false);
+
+    return asyncTask.then(() => {
+      let deliveredAgain = false;
+      const task2 = asyncTask.then(result => {
+        assert.strictEqual(result, 2345);
+        assert.strictEqual(deliveredAgain, false);
+        deliveredAgain = true;
+        return result + 1111;
+      });
+      assert.strictEqual(deliveredAgain, false);
+
+      return task2.then(result => {
+        assert.strictEqual(deliveredAgain, true);
+        assert.strictEqual(result, 3456);
+      });
+    });
+  });
 });
