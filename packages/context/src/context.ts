@@ -10,8 +10,8 @@ function setTimeoutWithContext(callback: () => any, delay: number) {
 
 // Turn any generator function into an async function (using yield instead
 // of await), with context automatically preserved across yields.
-export function asyncFromGen<TArgs extends any[], TResult>(
-  genFn: (...args: TArgs) => IterableIterator<TResult>,
+export function asyncFromGen<TArgs extends any[]>(
+  genFn: (...args: TArgs) => any
 ) {
   return function (this: any) {
     const gen = genFn.apply(this, arguments as any);
@@ -19,10 +19,10 @@ export function asyncFromGen<TArgs extends any[], TResult>(
     const boundThrow = bind(gen.throw!);
     type Method = typeof boundNext | typeof boundThrow;
 
-    return new Promise<TResult>((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       function invoke(method: Method, argument: any) {
         try {
-          var result = method.call(gen, argument);
+          var result: any = method.call(gen, argument);
         } catch (error) {
           return reject(error);
         }
@@ -37,7 +37,7 @@ export function asyncFromGen<TArgs extends any[], TResult>(
       const invokeThrow = (error: any) => invoke(boundThrow, error);
       invokeNext();
     });
-  } as (...args: TArgs) => Promise<TResult>;
+  } as (...args: TArgs) => Promise<any>;
 }
 
 function isPromiseLike(value: any): value is PromiseLike<any> {
