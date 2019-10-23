@@ -47,6 +47,9 @@ export class Task<TResult> implements PromiseLike<TResult> {
 
   private state: State = State.UNSETTLED;
   private resultOrError?: any;
+  // Becomes false when/if this Task delivers a result asynchronously, so
+  // all future results can be delivered asynchronously as well.
+  private sync = true;
 
   // More Task.WHATEVER constants can be added here as necessary.
   static readonly VOID = new Task<void>(task => task.resolve());
@@ -77,7 +80,7 @@ export class Task<TResult> implements PromiseLike<TResult> {
     onResolved?: ((value: TResult) => A | PromiseLike<A>) | null,
     onRejected?: ((reason: any) => B | PromiseLike<B>) | null,
   ): Task<A | B> {
-    if (!this.promise) {
+    if (this.sync) {
       if (this.state === State.RESOLVED) {
         return new Task<any>(task => task.resolve(
           onResolved ? onResolved(this.resultOrError) : this.resultOrError,
@@ -91,7 +94,11 @@ export class Task<TResult> implements PromiseLike<TResult> {
       }
     }
 
-    return Task.resolve(this.toPromise().then(
+    // Once this Task has delivered a result asynchronously, all future
+    // results must also be delivered asynchronously.
+    this.sync = false;
+
+    return Task.resolve<any>(this.toPromise().then(
       onResolved && bind(onResolved),
       onRejected && bind(onRejected),
     ));

@@ -100,6 +100,8 @@ describe("Task", function () {
     });
     assert.strictEqual(delivered, true);
 
+    const promise = syncTask.toPromise();
+
     let deliveredAgain = false;
     syncTask.then(result => {
       assert.strictEqual(result, "OYEZ");
@@ -107,6 +109,10 @@ describe("Task", function () {
       deliveredAgain = true;
     });
     assert.strictEqual(deliveredAgain, true);
+
+    return promise.then(result => {
+      assert.strictEqual(result, "OYEZ");
+    });
   });
 
   it("should deliver asynchronous results consistently", function () {
