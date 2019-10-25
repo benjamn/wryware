@@ -76,6 +76,20 @@ export class Task<TResult> implements PromiseLike<TResult> {
     return new this<T>(task => task.reject(value));
   }
 
+  static all<T>(tasks: Array<T | PromiseLike<T>>): Task<T[]> {
+    const results: T[] = [];
+    return tasks.reduce(
+      (prevTask: Task<T>, nextTask, i) => prevTask.then(prevResult => {
+        if (i > 0) results.push(prevResult);
+        return nextTask;
+      }),
+      Task.VOID as Task<any>,
+    ).then(finalResult => {
+      if (tasks.length > 0) results.push(finalResult);
+      return results;
+    });
+  }
+
   public then<A = TResult, B = never>(
     onResolved?: ((value: TResult) => A | PromiseLike<A>) | null,
     onRejected?: ((reason: any) => B | PromiseLike<B>) | null,

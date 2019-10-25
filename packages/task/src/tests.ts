@@ -85,6 +85,26 @@ describe("Task", function () {
     })
   });
 
+  it("supports Task.all like Promise.all", function () {
+    // Using Task.all at the outermost layer here would be nice, but that
+    // would require exploding the type declarations for Task.all in a manner
+    // similar to Promise.all, which seems like a monumental hassle.
+    return Promise.all([
+      Task.all([1, 2, 3]),
+      Task.all([
+        Task.resolve("a"),
+        "b",
+        new Task<string>(task => setTimeout(() => task.resolve("c"), 10)),
+        Promise.resolve("d"),
+      ]),
+      Task.all([]),
+    ]).then(([primitives, mixed, empty]) => {
+      assert.deepEqual(primitives, [1, 2, 3]);
+      assert.deepEqual(mixed, ["a", "b", "c", "d"]);
+      assert.deepEqual(empty, []);
+    });
+  });
+
   it("should deliver synchronous results consistently", function () {
     const syncTask = new Task(task => {
       return Task.resolve("oyez").then(result => {
