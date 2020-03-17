@@ -2,6 +2,8 @@ import { Slot } from "./slot";
 export { Slot }
 export const { bind, noContext } = Slot;
 
+declare function setTimeout(callback: (...args: any[]) => void, ms: number, ...args: any[]): any;
+
 // Like global.setTimeout, except the callback runs with captured context.
 export { setTimeoutWithContext as setTimeout };
 function setTimeoutWithContext(callback: () => any, delay: number) {
