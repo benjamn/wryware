@@ -1,0 +1,32 @@
+{
+  "name": "@wry/record",
+  "version": "0.1.2",
+  "author": "Ben Newman <ben@eloper.dev>",
+  "description": "Immutable finite list objects with constant-time equality testing (===) and no hidden memory leaks",
+  "license": "MIT",
+  "main": "lib/record.js",
+  "module": "lib/record.esm.js",
+  "types": "lib/record.d.ts",
+  "keywords": [],
+  "homepage": "https://github.com/benjamn/wryware",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benjamn/wryware.git"
+  },
+  "bugs": {
+    "url": "https://github.com/benjamn/wryware/issues"
+  },
+  "scripts": {
+    "clean": "../../node_modules/.bin/rimraf lib",
+    "tsc": "../../node_modules/.bin/tsc",
+    "rollup": "../../node_modules/.bin/rollup -c",
+    "build": "npm run clean && npm run tsc && npm run rollup",
+    "mocha": "../../scripts/test.sh lib/tests.js",
+    "prepublish": "npm run build",
+    "test": "npm run build && npm run mocha"
+  },
+  "dependencies": {
+    "@wry/tuple": "^0.1.2",
+    "tslib": "^1.11.1"
+  }
+}
