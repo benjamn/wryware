@@ -11,15 +11,12 @@ First install the package from npm:
 npm install @wry/tuple
 ```
 
-To begin creating `Tuple` objects
-
-This package has a default export that can be imported by any name, but is
-most often called `tuple`:
+This package has a default export that can be imported using any name, but
+is typically named `tuple`:
 
 ```js
-import tuple from "@wry/tuple";
-
 import assert from "assert";
+import tuple from "@wry/tuple";
 
 // Tuples are array-like:
 assert(tuple(1, 2, 3).length === 3);
@@ -34,8 +31,9 @@ assert.strictEqual(
 
 In addition to the default export, `@wry/tuple` exports the `Tuple` class,
 whose `Tuple.from` function provides the default export; and the
-`WeakTrie` class, which you can learn more about by reading its code. You
-probably will not need to use these exports directly:
+`WeakTrie` class, which you can learn more about by reading its
+[code](/packages/tuple/src/weak-trie.ts).
+You probably will not need to use these exports directly:
 
 ```
 import tuple, { Tuple, WeakTrie } from "@wry/tuple";
@@ -43,7 +41,7 @@ import tuple, { Tuple, WeakTrie } from "@wry/tuple";
 assert(tuple === Tuple.from);
 ```
 
-### Constructing `tuple`s
+### Constructing tuples
 
 The `tuple` function takes any number of arguments and returns a unique,
 immutable object that inherits from `Tuple.prototype` and is guaranteed to
