@@ -1,13 +1,13 @@
 import { WeakTrie } from "./weak-trie";
 export { WeakTrie }
 
-export class Tuple<T extends any[]> implements Iterable<T[number]> {
-  private static trie = new WeakTrie<{
-    tuple: Tuple<any>;
-  }>();
+const trie = new WeakTrie<{
+  tuple: Tuple<any>;
+}>();
 
+export class Tuple<T extends any[]> implements Iterable<T[number]> {
   public static from<E extends any[]>(...elements: E): Tuple<E> {
-    const node = Tuple.trie.lookupArray(elements);
+    const node = trie.lookupArray(elements);
     return node.tuple || (node.tuple = new Tuple(elements));
   }
 
