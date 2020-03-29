@@ -2,7 +2,7 @@
   "name": "@wry/record",
   "version": "0.1.2",
   "author": "Ben Newman <ben@eloper.dev>",
-  "description": "Immutable finite list objects with constant-time equality testing (===) and no hidden memory leaks",
+  "description": "Immutable record objects with constant-time equality testing (===) and no hidden memory leaks",
   "license": "MIT",
   "main": "lib/record.js",
   "module": "lib/record.esm.js",
