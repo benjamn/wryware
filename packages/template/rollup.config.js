@@ -33,7 +33,7 @@ export default [{
     file: "lib/template.js",
     format: "cjs",
     exports: "named",
-    sourceMap: true,
+    sourcemap: true,
     name: "template",
     globals,
   },

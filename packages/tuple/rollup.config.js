@@ -33,7 +33,7 @@ export default [{
     file: "lib/tuple.js",
     format: "cjs",
     exports: "named",
-    sourceMap: true,
+    sourcemap: true,
     name: "tuple",
     globals,
   },

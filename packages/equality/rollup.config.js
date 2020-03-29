@@ -33,7 +33,7 @@ export default [{
     file: "lib/equality.js",
     format: "cjs",
     exports: "named",
-    sourceMap: true,
+    sourcemap: true,
     name: "equality",
     globals,
   },

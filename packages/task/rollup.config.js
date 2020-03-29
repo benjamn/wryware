@@ -34,7 +34,7 @@ export default [{
     file: "lib/task.js",
     format: "cjs",
     exports: "named",
-    sourceMap: true,
+    sourcemap: true,
     name: "task",
     globals,
   },

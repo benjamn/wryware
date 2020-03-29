@@ -33,7 +33,7 @@ export default [{
     file: "lib/context.js",
     format: "cjs",
     exports: "named",
-    sourceMap: true,
+    sourcemap: true,
     name: "context",
     globals,
   },
