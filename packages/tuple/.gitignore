@@ -41,6 +41,3 @@ lib
 
 # Cache for rollup-plugin-typescript2
 .rpt2_cache
-
-# Ignore the lockfile for packages/tuple.
-package-lock.json
