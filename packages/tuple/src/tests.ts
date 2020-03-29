@@ -40,4 +40,32 @@ describe("tuple", function () {
       tuple(1, 1, 1, 1, 1, 1),
     );
   })
+
+  it("should be usable as Map keys", function () {
+    const map = new Map;
+
+    assert.strictEqual(map.has(tuple(1, tuple(2, "buckle"), true)), false);
+    map.set(tuple(1, tuple(2, "buckle"), true), "oh my");
+    assert.strictEqual(map.has(tuple(1, tuple(2, "buckle"), true)), true);
+    assert.strictEqual(map.get(tuple(1, tuple(2, "buckle"), true)), "oh my");
+
+    map.forEach(function (value, key) {
+      assert.strictEqual(key, tuple(1, tuple(2, "buckle"), true));
+      assert.strictEqual(value, "oh my");
+    });
+
+    map.delete(tuple(1, tuple(2, "buckle"), true));
+    map.forEach(function () {
+      throw new Error("unreached");
+    });
+  });
+
+  it("should be storable in a Set", function () {
+    const set = new Set([
+      tuple(1, 2, tuple(3, 4), 5),
+      tuple(1, 2, tuple(3, 4), 5),
+    ]);
+
+    assert.strictEqual(set.size, 1);
+  });
 });
