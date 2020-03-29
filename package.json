@@ -11,14 +11,14 @@
     "test": "npm run build && lerna run test"
   },
   "devDependencies": {
-    "@types/mocha": "^5.2.7",
-    "@types/node": "^12.11.5",
-    "lerna": "^3.18.3",
-    "mocha": "^6.2.2",
-    "rimraf": "^3.0.0",
-    "rollup": "^1.25.1",
-    "rollup-plugin-typescript2": "^0.24.3",
-    "source-map-support": "^0.5.13",
-    "typescript": "^3.6.4"
+    "@types/mocha": "7.0.2",
+    "@types/node": "13.9.5",
+    "lerna": "3.20.2",
+    "mocha": "7.1.1",
+    "rimraf": "3.0.2",
+    "rollup": "2.2.0",
+    "rollup-plugin-typescript2": "0.27.0",
+    "source-map-support": "0.5.16",
+    "typescript": "3.8.3"
   }
 }
