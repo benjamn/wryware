@@ -6,3 +6,6 @@ node_js:
   - "11"
   - "12"
   - "13"
+
+before_install:
+  - npm install -g npm@latest
