@@ -1,6 +1,6 @@
 {
   "name": "@wry/task",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "author": "Ben Newman <ben@eloper.dev>",
   "description": "Promise-compatible asynchronous computation primitive",
   "license": "MIT",
