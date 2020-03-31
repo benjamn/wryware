@@ -2,6 +2,14 @@ import { Slot } from "./slot";
 export { Slot }
 export const { bind, noContext } = Slot;
 
+// Relying on the @types/node declaration of global.setTimeout can make
+// things tricky for dowstream projects (see PR #7).
+declare function setTimeout(
+  callback: (...args: any[]) => any,
+  ms?: number,
+  ...args: any[]
+): any;
+
 // Like global.setTimeout, except the callback runs with captured context.
 export { setTimeoutWithContext as setTimeout };
 function setTimeoutWithContext(callback: () => any, delay: number) {
