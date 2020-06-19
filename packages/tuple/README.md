@@ -221,4 +221,4 @@ allows keys that are object references.
 In other words, `node.set(item, ...)` would fail whenever `item` is not an
 object, if `node` is a `WeakMap`. To see how the `@wry/tuple` library
 cleverly gets around this `WeakMap` limitation, have a look at
-[this module](https://github.com/benjamn/wryware/blob/master/packages/tuple/src/weak-trie.ts).
+[this module](https://github.com/benjamn/wryware/blob/main/packages/tuple/src/weak-trie.ts).
