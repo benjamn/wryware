@@ -28,5 +28,8 @@
   "dependencies": {
     "@wry/trie": "^0.2.1",
     "tslib": "^1.14.1"
+  },
+  "engines": {
+    "node": ">=8"
   }
 }
