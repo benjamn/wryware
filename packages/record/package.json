@@ -28,5 +28,8 @@
   "dependencies": {
     "@wry/tuple": "^0.2.0",
     "tslib": "^1.14.1"
+  },
+  "engines": {
+    "node": ">=8"
   }
 }
