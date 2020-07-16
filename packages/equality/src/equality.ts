@@ -1,4 +1,5 @@
 const { toString, hasOwnProperty } = Object.prototype;
+const fnToStr = Function.prototype.toString;
 const previousComparisons = new Map<object, Set<object>>();
 
 /**
@@ -112,10 +113,50 @@ function check(a: any, b: any): boolean {
 
       return true;
     }
+
+    case '[object Function]': {
+      const aCode = fnToStr.call(a);
+      if (aCode !== fnToStr.call(b)) {
+        return false;
+      }
+
+      // We consider non-native functions equal if they have the same code
+      // (native functions require === because their code is censored).
+      // Note that this behavior is not entirely sound, since !== function
+      // objects with the same code can behave differently depending on
+      // their closure scope. However, any function can behave differently
+      // depending on the values of its input arguments (including this)
+      // and its calling context (including its closure scope), even
+      // though the function object is === to itself; and it is entirely
+      // possible for functions that are not === to behave exactly the
+      // same under all conceivable circumstances. Because none of these
+      // factors are statically decidable in JavaScript, JS function
+      // equality is not well-defined. This ambiguity allows us to
+      // consider the best possible heuristic among various imperfect
+      // options, and equating non-native functions that have the same
+      // code has enormous practical benefits, such as when comparing
+      // functions that are repeatedly passed as fresh function
+      // expressions within objects that are otherwise deeply equal. Since
+      // any function created from the same syntactic expression (in the
+      // same code location) will always stringify to the same code
+      // according to fnToStr.call, we can reasonably expect these
+      // repeatedly passed function expressions to have the same code, and
+      // thus behave "the same" (with all the caveats mentioned above),
+      // even though the runtime function objects are !== to one another.
+      return !endsWith(aCode, nativeCodeSuffix);
+    }
   }
 
   // Otherwise the values are not equal.
   return false;
+}
+
+const nativeCodeSuffix = "{ [native code] }";
+
+function endsWith(full: string, suffix: string) {
+  const fromIndex = full.length - suffix.length;
+  return fromIndex >= 0 &&
+    full.indexOf(suffix, fromIndex) === fromIndex;
 }
 
 function previouslyCompared(a: object, b: object): boolean {
