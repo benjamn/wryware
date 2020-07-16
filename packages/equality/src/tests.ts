@@ -206,12 +206,32 @@ describe("equality", function () {
     );
   });
 
-  it("should not equate distinct functions", function () {
+  it("should equate non-native functions with the same code", function () {
     const fn = () => 1234;
     assertEqual(fn, fn);
+    assertEqual(fn, () => 1234);
+
+    // These functions are behaviorally the same, but there's no way to
+    // decide that question statically.
     assertNotEqual(
-      fn,
-      () => 1234,
+      (a: number) => a + 1,
+      (b: number) => b + 1,
+    );
+
+    assertEqual(
+      { before: 123, fn() { return 4 }, after: 321 },
+      { after: 321, before: 123, fn() { return 4 } },
+    );
+
+    assertEqual(Object.assign, Object.assign);
+
+    // Since these slice methods are native functions, they happen to have
+    // exactly the same (censored) code, but we can test their equality by
+    // reference, since we can generally assume native functions are pure.
+    assertNotEqual(String.prototype.slice, Array.prototype.slice);
+    assertEqual(
+      Function.prototype.toString.call(String.prototype.slice),
+      Function.prototype.toString.call(Array.prototype.slice),
     );
   });
 });
