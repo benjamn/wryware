@@ -13,7 +13,7 @@
   "devDependencies": {
     "@types/mocha": "8.0.3",
     "@types/node": "13.9.5",
-    "lerna": "3.20.2",
+    "lerna": "3.22.1",
     "mocha": "7.1.1",
     "rimraf": "3.0.2",
     "rollup": "2.2.0",
