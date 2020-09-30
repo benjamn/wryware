@@ -1,14 +1,22 @@
 import assert from "assert";
 import defaultEqual, { equal } from "./equality";
 
+function toStr(value: any) {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 function assertEqual(a: any, b: any) {
-  assert.strictEqual(equal(a, b), true, `unexpectedly not equal(${a}, ${b})`);
-  assert.strictEqual(equal(b, a), true, `unexpectedly not equal(${b}, ${a})`);
+  assert.strictEqual(equal(a, b), true, `unexpectedly not equal(${toStr(a)}}, ${toStr(b)})`);
+  assert.strictEqual(equal(b, a), true, `unexpectedly not equal(${toStr(b)}, ${toStr(a)})`);
 }
 
 function assertNotEqual(a: any, b: any) {
-  assert.strictEqual(equal(a, b), false, `unexpectedly equal(${a}, ${b})`);
-  assert.strictEqual(equal(b, a), false, `unexpectedly equal(${b}, ${a})`);
+  assert.strictEqual(equal(a, b), false, `unexpectedly equal(${toStr(a)}, ${toStr(b)})`);
+  assert.strictEqual(equal(b, a), false, `unexpectedly equal(${toStr(b)}, ${toStr(a)})`);
 }
 
 describe("equality", function () {
