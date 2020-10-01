@@ -43,8 +43,8 @@ function check(a: any, b: any): boolean {
     case '[object Object]': {
       if (previouslyCompared(a, b)) return true;
 
-      const aKeys = Object.keys(a);
-      const bKeys = Object.keys(b);
+      const aKeys = definedKeys(a);
+      const bKeys = definedKeys(b);
 
       // If `a` and `b` have a different number of enumerable keys, they
       // must be different.
@@ -149,6 +149,18 @@ function check(a: any, b: any): boolean {
 
   // Otherwise the values are not equal.
   return false;
+}
+
+function definedKeys<TObject extends object>(obj: TObject) {
+  // Remember that the second argument to Array.prototype.filter will be
+  // used as `this` within the callback function.
+  return Object.keys(obj).filter(isDefinedKey, obj);
+}
+function isDefinedKey<TObject extends object>(
+  this: TObject,
+  key: keyof TObject,
+) {
+  return this[key] !== void 0;
 }
 
 const nativeCodeSuffix = "{ [native code] }";

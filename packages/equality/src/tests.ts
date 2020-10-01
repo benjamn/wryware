@@ -63,11 +63,12 @@ describe("equality", function () {
       [1, /*hole*/, 3],
     );
 
-    assertNotEqual(
+    assertEqual(
       [1, /*hole*/, 3],
       [1, void 0, 3],
     );
 
+    // Not equal because the arrays are a different length.
     assertNotEqual(
       [1, 2, /*hole*/,],
       [1, 2],
@@ -100,6 +101,23 @@ describe("equality", function () {
 
     b.foo = 42;
     assertNotEqual(a, b);
+  });
+
+  it("should consider undefined and missing object properties equivalent", function () {
+    assertEqual({
+      a: 1,
+      b: void 0,
+      c: 3,
+    }, {
+      a: 1,
+      c: 3,
+    });
+
+    assertEqual({
+      a: void 0,
+      b: void 0,
+      c: void 0,
+    }, {});
   });
 
   it("should work for Error objects", function () {
