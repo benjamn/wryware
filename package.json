@@ -14,7 +14,7 @@
     "@types/mocha": "8.0.3",
     "@types/node": "13.9.5",
     "lerna": "3.22.1",
-    "mocha": "7.1.1",
+    "mocha": "8.2.0",
     "rimraf": "3.0.2",
     "rollup": "2.2.0",
     "rollup-plugin-typescript2": "0.27.3",
