@@ -16,7 +16,7 @@
     "lerna": "3.22.1",
     "mocha": "7.1.1",
     "rimraf": "3.0.2",
-    "rollup": "2.2.0",
+    "rollup": "2.32.1",
     "rollup-plugin-typescript2": "0.27.3",
     "source-map-support": "0.5.16",
     "typescript": "4.0.3"
