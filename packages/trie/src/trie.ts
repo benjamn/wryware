@@ -18,7 +18,7 @@ export class Trie<Data> {
   private data?: Data;
 
   constructor(
-    private weakness: boolean,
+    private weakness = true,
     private makeData: (array: any[]) => Data = defaultMakeData,
   ) {}
 
