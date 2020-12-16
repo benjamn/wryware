@@ -1,6 +1,6 @@
 {
   "name": "@wry/record",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "author": "Ben Newman <ben@eloper.dev>",
   "description": "Immutable record objects with constant-time equality testing (===) and no hidden memory leaks",
   "license": "MIT",
