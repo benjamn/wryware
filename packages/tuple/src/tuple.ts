@@ -1,9 +1,9 @@
-import { WeakTrie } from "./weak-trie";
-export { WeakTrie }
+import { Trie } from "@wry/trie";
+export { Trie as WeakTrie }
 
-const trie = new WeakTrie<{
+const pool = new Trie<{
   tuple: Tuple<any>;
-}>();
+}>(true);
 
 export class Tuple<T extends any[]>
   implements ArrayLike<T[number]>, Iterable<T[number]>
@@ -19,7 +19,7 @@ export class Tuple<T extends any[]>
   // other if (and only if) they have identical (===) elements, which
   // allows checking deep equality in constant time.
   public static from<E extends any[]>(...elements: E): Tuple<E> {
-    const node = trie.lookupArray(elements);
+    const node = pool.lookupArray(elements);
     return node.tuple || (node.tuple = new Tuple(elements));
   }
 

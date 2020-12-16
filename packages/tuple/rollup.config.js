@@ -4,6 +4,7 @@ import typescript from 'typescript';
 const globals = {
   __proto__: null,
   tslib: "tslib",
+  "@wry/trie": "trie",
 };
 
 function external(id) {
