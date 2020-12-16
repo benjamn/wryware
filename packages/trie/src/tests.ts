@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { Trie } from "./trie";
 
-describe("KeyTrie", function () {
+describe("Trie", function () {
   it("can be imported", function () {
     assert.strictEqual(typeof Trie, "function");
   });
