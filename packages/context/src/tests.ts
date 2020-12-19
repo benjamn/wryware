@@ -308,7 +308,7 @@ describe("setTimeout", function () {
     const booleanSlot = new Slot<boolean>();
     const objectSlot = new Slot<{ foo: number }>();
 
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       booleanSlot.withValue(true, () => {
         assert.strictEqual(booleanSlot.getValue(), true);
         objectSlot.withValue({ foo: 42 }, () => {
@@ -399,14 +399,14 @@ describe("asyncFromGen", function () {
 
       checkValues();
 
-      yield new Promise(resolve => setTimeout(function () {
+      yield new Promise<void>(resolve => setTimeout(function () {
         checkValues();
         resolve();
       }, 10));
 
       checkValues();
 
-      yield new Promise(resolve => {
+      yield new Promise<void>(resolve => {
         checkValues();
         resolve();
       });
