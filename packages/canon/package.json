@@ -1,0 +1,42 @@
+{
+  "name": "@wry/canon",
+  "private": true,
+  "author": "Ben Newman <ben@eloper.dev>",
+  "description": "Efficient canonization for directed graphs with named edges and primitive leaf values",
+  "license": "MIT",
+  "main": "lib/canon.js",
+  "module": "lib/canon.esm.js",
+  "types": "lib/canon.d.ts",
+  "keywords": [
+    "graph",
+    "canonical",
+    "canonization",
+    "canonicalization",
+    "isomorphism",
+    "identity",
+    "equality"
+  ],
+  "homepage": "https://github.com/benjamn/wryware",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benjamn/wryware.git"
+  },
+  "bugs": {
+    "url": "https://github.com/benjamn/wryware/issues"
+  },
+  "scripts": {
+    "clean": "../../node_modules/.bin/rimraf lib",
+    "tsc": "../../node_modules/.bin/tsc",
+    "rollup": "../../node_modules/.bin/rollup -c",
+    "build": "npm run clean && npm run tsc && npm run rollup",
+    "mocha": "../../scripts/test.sh lib/tests.js",
+    "prepublish": "npm run build",
+    "test": "npm run build && npm run mocha"
+  },
+  "dependencies": {
+    "tslib": "^1.14.1"
+  },
+  "engines": {
+    "node": ">=8"
+  }
+}
