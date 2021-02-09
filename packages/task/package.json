@@ -34,5 +34,8 @@
   "dependencies": {
     "@wry/context": "file:../context",
     "tslib": "^1.14.1"
+  },
+  "engines": {
+    "node": ">=8"
   }
 }
