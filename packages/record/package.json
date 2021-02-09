@@ -26,7 +26,7 @@
     "test": "npm run build && npm run mocha"
   },
   "dependencies": {
-    "@wry/tuple": "^0.2.0",
+    "@wry/tuple": "file:../tuple",
     "tslib": "^1.14.1"
   },
   "engines": {
