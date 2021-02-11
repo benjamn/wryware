@@ -34,6 +34,7 @@
     "test": "npm run build && npm run mocha"
   },
   "dependencies": {
+    "@wry/trie": "file:../trie",
     "tslib": "^1.14.1"
   },
   "engines": {
