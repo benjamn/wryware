@@ -81,4 +81,49 @@ describe("Canon", () => {
       admitted,
     );
   });
+
+  it("can admit objects that symmetrically reference each other", () => {
+    const canon = new Canon;
+
+    const a: Record<string, any> = {};
+    const b: Record<string, any> = {};
+
+    a.other = b;
+    a.self = a;
+
+    b.other = a;
+    b.self = b;
+
+    const a1 = canon.admit(a);
+    const b1 = canon.admit(b);
+
+    assert.strictEqual(a1.other, b1);
+    assert.strictEqual(a1.self, a1);
+    assert.strictEqual(b1.other, a1);
+    assert.strictEqual(b1.self, b1);
+
+    assert.ok(equal(a, a1));
+    assert.ok(equal(b, b1));
+
+    // This is the REAL magic trick.
+    assert.strictEqual(a1, b1);
+
+    b.a = a;
+    a.b = b;
+
+    const a2 = canon.admit(a);
+    const b2 = canon.admit(b);
+
+    assert.ok(equal(a, a2));
+    assert.ok(equal(b, b2));
+
+    assert.notStrictEqual(a1, a2);
+    assert.notStrictEqual(b1, b2);
+
+    assert.strictEqual(a2.b, b2);
+    assert.strictEqual(b2.a, a2);
+
+    assert.notStrictEqual(a2, b2);
+    assert.strictEqual(equal(a2, b2), false);
+  });
 });
