@@ -46,4 +46,36 @@ describe("Canon", () => {
       admitted1,
     );
   });
+
+  it("can admit arrays that contain themselves", () => {
+    const canon = new Canon;
+
+    const input: any[] = [1];
+    input.push(input, 2, input, 3);
+
+    const admitted = canon.admit(input);
+
+    assert.strictEqual(admitted[1], admitted);
+    assert.strictEqual(admitted[3], admitted);
+
+    assert.strictEqual(
+      canon.admit(input),
+      admitted,
+    );
+
+    assert.strictEqual(
+      canon.admit(admitted),
+      admitted,
+    );
+
+    assert.strictEqual(
+      canon.admit(input[3]),
+      admitted[3],
+    );
+
+    assert.strictEqual(
+      canon.admit(admitted[3]),
+      admitted,
+    );
+  });
 });
