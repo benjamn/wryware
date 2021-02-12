@@ -117,12 +117,35 @@ export class Canon {
           return trace[nextTraceIndex] =
             node.traceArray || (node.traceArray = traceArray);
         }
+
         case "[object Object]": {
-          // TODO
+          const proto = Object.getPrototypeOf(input);
+          // TODO Memoize this sorting.
+          const keys = Object.keys(input).sort();
+          const traceObject = [proto];
+          // TODO Memoize this stringification.
+          traceObject.push(JSON.stringify(keys));
+          keys.forEach(key => {
+            const child = (input as any)[key];
+            if (isObjectOrArray(child)) {
+              if (rootInfo.component.has(child)) {
+                traceObject.push(scan(child));
+              } else {
+                traceObject.push(infoMap.get(child)!.known);
+              }
+            } else {
+              traceObject.push(child);
+            }
+          });
+          const node = this.pool.lookupArray(traceObject);
+          return trace[nextTraceIndex] =
+            node.traceObject || (node.traceObject = traceObject);
         }
       }
+
       return input;
     };
+
     scan(inputRoot);
 
     const node = this.pool.lookupArray(trace);
