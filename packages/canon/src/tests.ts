@@ -1,4 +1,5 @@
 import assert from "assert";
+import { equal } from "@wry/equality";
 import { Canon } from "./canon";
 
 describe("Canon", () => {
@@ -57,6 +58,8 @@ describe("Canon", () => {
 
     assert.strictEqual(admitted[1], admitted);
     assert.strictEqual(admitted[3], admitted);
+
+    assert.ok(equal(input, admitted));
 
     assert.strictEqual(
       canon.admit(input),
