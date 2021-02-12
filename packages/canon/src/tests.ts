@@ -126,4 +126,67 @@ describe("Canon", () => {
     assert.notStrictEqual(a2, b2);
     assert.strictEqual(equal(a2, b2), false);
   });
+
+  it("can admit ring structures", () => {
+    function cons(value: number, tail: any) {
+      return { value, tail };
+    }
+    const last = cons(5, null);
+    const list = cons(1, cons(2, cons(3, cons(4, last))));
+    last.tail = list;
+
+    const canon = new Canon;
+
+    const from1 = canon.admit(list);
+    const from2 = canon.admit(list.tail);
+    const from3 = canon.admit(list.tail.tail);
+    const from4 = canon.admit(list.tail.tail.tail);
+    const from5 = canon.admit(list.tail.tail.tail.tail);
+
+    assert.ok(equal(from1, list));
+    assert.ok(equal(from2, list.tail));
+    assert.ok(equal(from3, list.tail.tail));
+    assert.ok(equal(from4, list.tail.tail.tail));
+    assert.ok(equal(from5, list.tail.tail.tail.tail));
+    assert.ok(equal(from1, list.tail.tail.tail.tail.tail));
+
+    assert.strictEqual(from1, canon.admit(list));
+    assert.strictEqual(from2, canon.admit(list.tail));
+    assert.strictEqual(from3, canon.admit(list.tail.tail));
+    assert.strictEqual(from4, canon.admit(list.tail.tail.tail));
+    assert.strictEqual(from5, canon.admit(list.tail.tail.tail.tail));
+    assert.strictEqual(from1, canon.admit(list.tail.tail.tail.tail.tail));
+
+    const fromSet = new Set([
+      from1,
+      from1.tail,
+      from1.tail.tail,
+      from1.tail.tail.tail,
+      from1.tail.tail.tail.tail,
+      from1.tail.tail.tail.tail.tail,
+      from1.tail.tail.tail.tail.tail.tail,
+    ]);
+    assert.strictEqual(fromSet.size, 5);
+
+    const symLast = cons(1, null);
+    const symList = cons(2, cons(1, cons(2, symLast)));
+    symLast.tail = symList;
+
+    const symFrom2 = canon.admit(symList);
+    const symFrom1 = canon.admit(symList.tail);
+
+    assert.strictEqual(symFrom1, symFrom2.tail);
+    assert.strictEqual(symFrom2, symFrom1.tail);
+
+    const symSet = new Set([
+      symFrom1,
+      symFrom1.tail,
+      symFrom1.tail.tail,
+      symFrom1.tail.tail.tail,
+      symFrom1.tail.tail.tail.tail,
+      symFrom1.tail.tail.tail.tail.tail,
+      symFrom1.tail.tail.tail.tail.tail.tail,
+    ]);
+    assert.strictEqual(symSet.size, 2);
+  });
 });
