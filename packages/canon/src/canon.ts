@@ -1,13 +1,16 @@
 import { Trie } from "@wry/trie";
 import { buildComponentInfoMap, ComponentInfoMap } from "./components";
-import { Node, isObjectOrArray, numRef } from "./helpers";
+import { isObjectOrArray, numRef } from "./helpers";
 import { PrototypeHandlerMap } from "./handlers";
 
 export class Canon {
   public readonly handlers = new PrototypeHandlerMap;
 
   private known = new Set<object>();
-  private pool = new Trie<Node>(true);
+  private pool = new Trie<{
+    trace?: any[];
+    known?: object;
+  }>(true);
 
   public isCanonical(value: any): boolean {
     return !isObjectOrArray(value) ||

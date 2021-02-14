@@ -8,11 +8,6 @@ export interface Info {
   known?: object;
 }
 
-export interface Node {
-  trace?: any[];
-  known?: object;
-}
-
 export function last<T>(array: ArrayLike<T>): T {
   return array[array.length - 1];
 }
