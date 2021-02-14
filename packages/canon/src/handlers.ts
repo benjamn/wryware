@@ -48,12 +48,17 @@ export class PrototypeHandlerMap {
       refill: (this: P, array: C) => P | void;
     },
   ) {
-    // TODO Disallow this if anything has already been admitted?
+    if (this.usedPrototypes.has(prototype)) {
+      throw new Error("Cannot enable prototype that has already been looked up");
+    }
     this.map.set(prototype, Object.freeze(handlers) as any);
   }
 
+  private usedPrototypes = new Set<object | null>();
   public lookup(instance: object) {
-    return this.map.get(Object.getPrototypeOf(instance));
+    const proto = Object.getPrototypeOf(instance);
+    this.usedPrototypes.add(proto);
+    return this.map.get(proto);
   }
 
   // It's worthwhile to cache the sorting of arrays of strings, since the

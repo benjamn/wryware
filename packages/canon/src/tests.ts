@@ -271,4 +271,35 @@ describe("Canon", () => {
     assert.doesNotMatch("XXXyz", admitted.caseSensitive);
     assert.match("xxxyz", admitted.caseSensitive);
   });
+
+  it("does not allow enabling prototypes if already used", () => {
+    const canon = new Canon;
+
+    const input = {
+      set123: new Set([1, 2, 3]),
+      set321: new Set([3, 2, 1]),
+    };
+
+    const admitted = canon.admit(input);
+
+    assert.strictEqual(admitted.set123, input.set123);
+    assert.strictEqual(admitted.set321, input.set321);
+
+    const expectedError = new Error("Cannot enable prototype that has already been looked up");
+    assert.throws(() => {
+      canon.handlers.enable(Set.prototype, {
+        toArray(set) {
+          const array: any[] = [];
+          set.forEach(item => array.push(item));
+          return array;
+        },
+        empty() {
+          return new Set;
+        },
+        refill(array) {
+          array.forEach(this.add, this);
+        },
+      });
+    }, expectedError);
+  });
 });
