@@ -67,7 +67,12 @@ export class Canon {
           );
           // Freeze the repaired known object and officially admit it into
           // the canon of known canonical objects.
-          this.known.add(Object.freeze(known));
+          try {
+            Object.freeze(known);
+          } finally {
+            this.known.add(known);
+            return known;
+          }
         }
         return known;
       }
