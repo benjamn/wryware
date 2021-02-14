@@ -225,4 +225,50 @@ describe("Canon", () => {
     assert.strictEqual(admitted.b1.toString("utf8"), "oyez");
     assert.strictEqual(admitted.b2.toString("utf8"), "oyez");
   });
+
+  it("can admit value-type objects like RegExp", () => {
+    const canon = new Canon;
+
+    canon.handlers.enable(RegExp.prototype, {
+      toArray(pattern) {
+        return [pattern.source, pattern.flags];
+      },
+      refill(array) {
+        return new RegExp(array[0], array[1]);
+      },
+    });
+
+    const input: Record<string, any> = {
+      caseInsensitive: /^x+/i,
+      caseSensitive: /^x+/,
+      insensitiveAgain: new RegExp("^x+", "i"),
+    };
+
+    const inputRegExps = new Set(Object.values(input));
+    assert.strictEqual(inputRegExps.size, 3);
+
+    // Just for fun.
+    input.self = input;
+
+    const admitted = canon.admit(input);
+
+    assert.ok(equal(admitted, input));
+    assert.strictEqual(admitted.self, admitted);
+
+    const canonRegExps = new Set(
+      Object.values(admitted).filter(value => value instanceof RegExp)
+    );
+
+    // Only two canonical RegExp objects, because input.caseInsensitive
+    // and input.insensitiveAgain are equivalent.
+    assert.strictEqual(canonRegExps.size, 2);
+    assert.strictEqual(admitted.caseInsensitive, admitted.insensitiveAgain);
+    assert.notStrictEqual(admitted.caseInsensitive, admitted.caseSensitive);
+    assert.notStrictEqual(admitted.insensitiveAgain, admitted.caseSensitive);
+
+    assert.match("xXxXxyz", admitted.caseInsensitive);
+    assert.match("xXxXxyz", admitted.insensitiveAgain);
+    assert.doesNotMatch("XXXyz", admitted.caseSensitive);
+    assert.match("xxxyz", admitted.caseSensitive);
+  });
 });
