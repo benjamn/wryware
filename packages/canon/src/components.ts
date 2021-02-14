@@ -1,3 +1,4 @@
+import { Canon } from "./canon";
 import { Info, isObjectOrArray, last } from "./helpers";
 
 export type Component = Set<object> & {
@@ -9,7 +10,10 @@ export interface ComponentInfoMap {
   components: Array<Component>;
 }
 
-export function buildComponentInfoMap(value: any): ComponentInfoMap {
+export function buildComponentInfoMap(
+  value: any,
+  canon: Canon,
+): ComponentInfoMap {
   const map: ComponentInfoMap = {
     infoMap: new Map,
     components: [],
@@ -32,6 +36,8 @@ export function buildComponentInfoMap(value: any): ComponentInfoMap {
     const compStack: object[] = [];
 
     (function dfs(v: object) {
+      if (canon.isCanonical(v)) return;
+
       const info = map.infoMap.get(v);
       if (info) {
         // We've seen this node before, either because we just found a
@@ -60,18 +66,27 @@ export function buildComponentInfoMap(value: any): ComponentInfoMap {
           }
         }
       } else {
+        const handlers = canon.handlers.lookup(v);
+        if (!handlers) return;
+
         // We are encountering this node for the first time, so we assign
         // its info.order number and push it onto both stacks.
-        map.infoMap.set(v, { order: nextOrder++ } as Info);
+        const info = {
+          order: nextOrder++,
+          children: handlers.toArray(v),
+        } as Info;
+
+        map.infoMap.set(v, info);
         rootStack.push(v);
         compStack.push(v);
 
         // Recursively traverse the object children of v. Note that the
         // order in which we visit the children here does not matter for
         // the output of the getInfoMap function.
-        Object.keys(v).forEach(key => {
-          const w = (v as Record<string, unknown>)[key];
-          if (isObjectOrArray(w)) dfs(w);
+        info.children.forEach(child => {
+          if (!canon.isCanonical(child)) {
+            dfs(child);
+          }
         });
 
         // If v is part of a strongly connected component that contains no

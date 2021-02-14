@@ -1,19 +1,27 @@
 import { Trie } from "@wry/trie";
 import { buildComponentInfoMap, ComponentInfoMap } from "./components";
-import { Node, isObjectOrArray, objToStr, numRef, shallowClone } from "./helpers";
+import { Node, isObjectOrArray, numRef } from "./helpers";
+import { PrototypeHandlerMap } from "./handlers";
 
 export class Canon {
+  public readonly handlers = new PrototypeHandlerMap;
+
   private known = new Set<object>();
   private pool = new Trie<Node>(true);
 
+  public isCanonical(value: any): boolean {
+    return !isObjectOrArray(value) ||
+      this.known.has(value) ||
+      !this.handlers.lookup(value);
+  }
+
   public admit<T>(value: T): T;
   public admit(value: any) {
-    if (!isObjectOrArray(value) || this.known.has(value)) {
+    if (this.isCanonical(value)) {
       return value;
     }
     return this.scanComponents(
-      // TODO Need to let buildComponentInfoMap know about this.known.
-      buildComponentInfoMap(value),
+      buildComponentInfoMap(value, this),
     )(value);
   }
 
@@ -26,132 +34,95 @@ export class Canon {
       // way to terminate a Set.prototype.forEach loop early without
       // throwing an exception, so we use component.asArray.every instead.
       component.asArray.every(inputObject => {
-        const info = map.infoMap.get(inputObject)!;
-        const knownObject = this.scan(inputObject, map.infoMap);
-
-        if (this.known.has(knownObject)) {
+        if (this.isCanonical(this.scan(inputObject, map.infoMap))) {
           // This implies the entire component has already been canonized,
-          // so we can immediately populate inputInfo.known properties for
-          // every object in info.component, and terminate the loop early.
-          (function align(input: object, known: object) {
-            const inputInfo = map.infoMap.get(input)!;
-            if (!inputInfo.known) {
-              inputInfo.known = known;
-              Object.keys(input).forEach(key => {
-                const child = (input as any)[key];
-                if (isObjectOrArray(child) && info.component.has(child)) {
-                  align(child, (known as any)[key]);
-                }
-              });
-            }
-          })(inputObject, knownObject);
-
-          // Terminate the component.asArray.every loop.
+          // so we can terminate the component.asArray.every loop early.
           return false;
         }
-
         // This object still needs to be repaired and frozen before it can
         // be admitted into this.known.
-        info.known = knownObject;
         newlyAdmitted.push(inputObject as any);
-
         // Continue the component.asArray.every loop.
         return true;
       });
     });
 
-    // A function that quickly translates any input object into its (now)
-    // known canonical form.
-    const getKnown = (input: object) => map.infoMap.get(input)!.known!;
+    const gotten = new Set<object>();
+    const getKnown = (input: object): object => {
+      if (this.isCanonical(input)) return input;
+      const info = map.infoMap.get(input);
+      const known = info && info.known;
+      if (known) {
+        if (gotten.has(known)) return known;
+        gotten.add(known);
+        if (!this.isCanonical(known)) {
+          // Finish reconstructing the empty known object by translating any
+          // unknown object children to their known canonical forms.
+          this.handlers.lookup(input)!.refill.call(
+            known,
+            info!.children.map(getKnown),
+          );
+          // Freeze the repaired known object and officially admit it into
+          // the canon of known canonical objects.
+          this.known.add(Object.freeze(known));
+        }
+        return known;
+      }
+      return input;
+    };
 
-    if (newlyAdmitted.length) {
-      newlyAdmitted.forEach(inputObject => {
-        const knownObject = getKnown(inputObject) as typeof inputObject;
-
-        // Repair knownObject by translating any unknown object children
-        // to their known canonical forms.
-        Object.keys(knownObject).forEach(key => {
-          const child = knownObject[key];
-          if (isObjectOrArray(child) && !this.known.has(child)) {
-            knownObject[key] = getKnown(child);
-          }
-        });
-
-        // Freeze the repaired knownObject and officially admit it into
-        // the canon of known canonical objects.
-        this.known.add(Object.freeze(knownObject));
-      });
-    }
+    newlyAdmitted.forEach(getKnown);
 
     return getKnown;
   }
 
   private scan<Root extends object>(
-    inputRoot: Root,
+    root: Root,
     infoMap: ComponentInfoMap["infoMap"],
   ): Root {
-    const rootInfo = infoMap.get(inputRoot)!;
+    if (this.isCanonical(root)) return root;
+    const rootInfo = infoMap.get(root);
+    if (!rootInfo) return root;
+    if (rootInfo.known) return rootInfo.known as Root;
+
     // The capital N in Number is not a typo (see numRef comments below).
     const seen = new Map<object, Number>();
-    const trace: object[] = [];
+    const traces: object[] = [];
 
     const scan = (input: object) => {
       if (this.known.has(input)) return input;
+
+      const info = infoMap.get(input);
+      if (!info) return input;
+
       if (seen.has(input)) return seen.get(input)!;
-      const nextTraceIndex = trace.length;
+      const nextTraceIndex = traces.length;
       seen.set(input, numRef(nextTraceIndex));
 
-      switch (objToStr.call(input)) {
-        case "[object Array]": {
-          const traceArray: any[] = (input as any[]).map(child => {
-            if (isObjectOrArray(child)) {
-              if (rootInfo.component.has(child)) {
-                return scan(child);
-              }
-              // TODO Make sure this always succeeds.
-              return infoMap.get(child)!.known;
-            }
-            return child;
-          });
-          const node = this.pool.lookupArray(traceArray);
-          return trace[nextTraceIndex] =
-            node.traceArray || (node.traceArray = traceArray);
-        }
+      const handlers = this.handlers.lookup(input);
+      if (!handlers) return input;
 
-        case "[object Object]": {
-          const proto = Object.getPrototypeOf(input);
-          // TODO Memoize this sorting.
-          const keys = Object.keys(input).sort();
-          const traceObject = [proto];
-          // TODO Memoize this stringification.
-          traceObject.push(JSON.stringify(keys));
-          keys.forEach(key => {
-            const child = (input as any)[key];
-            if (isObjectOrArray(child)) {
-              if (rootInfo.component.has(child)) {
-                traceObject.push(scan(child));
-              } else {
-                traceObject.push(infoMap.get(child)!.known);
-              }
-            } else {
-              traceObject.push(child);
-            }
-          });
-          const node = this.pool.lookupArray(traceObject);
-          return trace[nextTraceIndex] =
-            node.traceObject || (node.traceObject = traceObject);
+      const trace = [Object.getPrototypeOf(input)];
+      info.children.forEach(child => {
+        if (this.isCanonical(child)) {
+          trace.push(child);
+        } else if (rootInfo.component.has(child)) {
+          trace.push(scan(child));
+        } else {
+          trace.push(this.scan(child, infoMap));
         }
-      }
+      });
 
-      return input;
+      const node = this.pool.lookupArray(trace);
+      return traces[nextTraceIndex] = node.trace || (node.trace = trace);
     };
 
-    scan(inputRoot);
+    if (scan(root) === root) return root;
 
-    const node = this.pool.lookupArray(trace);
+    const node = this.pool.lookupArray(traces);
     if (!node.known) {
-      node.known = shallowClone(inputRoot);
+      node.known = this.handlers.lookup(root)!.empty();
     }
-    return node.known as Root;
+    return rootInfo.known = node.known as Root;
   }
 }
