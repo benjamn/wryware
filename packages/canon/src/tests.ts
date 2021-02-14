@@ -189,4 +189,40 @@ describe("Canon", () => {
     ]);
     assert.strictEqual(symSet.size, 2);
   });
+
+  it("can admit value-type objects like Buffer", () => {
+    const canon = new Canon;
+
+    const harmlessCycle = Object.create(null);
+    harmlessCycle.self = harmlessCycle;
+
+    canon.handlers.enable(Buffer.prototype, {
+      toArray(buffer) {
+        return [buffer.toString("base64"), harmlessCycle];
+      },
+      refill(array) {
+        assert.ok(equal(array[1], harmlessCycle));
+        assert.notStrictEqual(harmlessCycle, array[1]);
+        assert.strictEqual(array[1], array[1].self);
+        assert.ok(canon.isCanonical(array[1]));
+
+        return Buffer.from(array[0], "base64");
+      },
+    });
+
+    const input = {
+      b1: Buffer.from("oyez", "utf8"),
+      b2: Buffer.from("oyez", "utf8"),
+    };
+    assert.notStrictEqual(input.b1, input.b2);
+
+    const admitted = canon.admit(input);
+    assert.strictEqual(admitted.b1, admitted.b2);
+    assert.ok(admitted.b1 instanceof Buffer);
+    assert.ok(Buffer.isBuffer(admitted.b1));
+    assert.ok(admitted.b2 instanceof Buffer);
+    assert.ok(Buffer.isBuffer(admitted.b2));
+    assert.strictEqual(admitted.b1.toString("utf8"), "oyez");
+    assert.strictEqual(admitted.b2.toString("utf8"), "oyez");
+  });
 });

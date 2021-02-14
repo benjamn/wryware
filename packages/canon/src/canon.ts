@@ -29,27 +29,6 @@ export class Canon {
   }
 
   private scanComponents(map: ComponentInfoMap) {
-    const newlyAdmitted: Record<string, unknown>[] = [];
-
-    // TODO Make sure this array is actually sorted in topological order.
-    map.components.forEach(component => {
-      // Although we might like to use component.forEach here, there's no
-      // way to terminate a Set.prototype.forEach loop early without
-      // throwing an exception, so we use component.asArray.every instead.
-      component.asArray.every(inputObject => {
-        if (this.isCanonical(this.scan(inputObject, map.infoMap))) {
-          // This implies the entire component has already been canonized,
-          // so we can terminate the component.asArray.every loop early.
-          return false;
-        }
-        // This object still needs to be repaired and frozen before it can
-        // be admitted into this.known.
-        newlyAdmitted.push(inputObject as any);
-        // Continue the component.asArray.every loop.
-        return true;
-      });
-    });
-
     const gotten = new Set<object>();
     const getKnown = (input: object): object => {
       if (this.isCanonical(input)) return input;
@@ -79,7 +58,28 @@ export class Canon {
       return input;
     };
 
-    newlyAdmitted.forEach(getKnown);
+    // TODO Make sure this array is actually sorted in topological order.
+    map.components.forEach(component => {
+      const newlyAdmitted: Record<string, unknown>[] = [];
+
+      // Although we might like to use component.forEach here, there's no
+      // way to terminate a Set.prototype.forEach loop early without
+      // throwing an exception, so we use component.asArray.every instead.
+      component.asArray.every(inputObject => {
+        if (this.isCanonical(this.scan(inputObject, map.infoMap))) {
+          // This implies the entire component has already been canonized,
+          // so we can terminate the component.asArray.every loop early.
+          return false;
+        }
+        // This object still needs to be repaired and frozen before it can
+        // be admitted into this.known.
+        newlyAdmitted.push(inputObject as any);
+        // Continue the component.asArray.every loop.
+        return true;
+      });
+
+      newlyAdmitted.forEach(getKnown);
+    });
 
     return getKnown;
   }
@@ -129,8 +129,37 @@ export class Canon {
 
     const node = this.pool.lookupArray(traces);
     if (!node.known) {
-      node.known = this.handlers.lookup(root)!.empty();
+      const handlers = this.handlers.lookup(root)!;
+      // If handlers.empty is defined, use it to create a new empty
+      // instance of the desired type, to be filled in later. Any type of
+      // object that can contain references back to itself must define
+      // handlers.empty, because the only way to (re)create a structure
+      // containing cycles is to start with an acyclic mutable object, and
+      // then modify it to refer (perhaps indirectly) back to itself. If
+      // handlers.empty is not defined, we instead call handlers.refill to
+      // construct the instance immediately, under the assumption that
+      // none of the children in rootInfo.children are in a cycle with the
+      // root object. This style of construction is necessary for types
+      // like Buffer that are immutable upon construction, and thus cannot
+      // ever contain references back to themselves.
+      node.known = handlers.empty
+        ? handlers.empty()
+        : handlers.refill(rootInfo.children.map(
+          // The children of immediately-constructible objects should
+          // never be in a cycle with the object itself, because that
+          // would imply the object must have existed before its children
+          // were created, even though the children are required to create
+          // the object. Because scanComponents processes components in
+          // topological order, starting with the leaves of the component
+          // graph (which is acylic by construction), and child is assumed
+          // to be in a separate component from rootInfo.component, we
+          // must already have processed the component that contains
+          // child, so the result of this.scan(child, infoMap) should
+          // always be a fully canonized value.
+          child => this.scan(child, infoMap),
+        )) as object;
     }
+
     return rootInfo.known = node.known as Root;
   }
 }

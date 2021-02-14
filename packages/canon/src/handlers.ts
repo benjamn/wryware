@@ -34,8 +34,8 @@ export class PrototypeHandlerMap {
     prototype: P | null,
     handlers: {
       toArray: (instance: P) => C;
-      empty: () => P,
-      refill: (this: P, children: C) => P | void;
+      empty?: () => P,
+      refill: (this: P, array: C) => P | void;
     },
   ) {
     // TODO Disallow this if anything has already been admitted?
