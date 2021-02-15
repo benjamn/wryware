@@ -6,7 +6,7 @@ import { PrototypeHandlerMap } from "./handlers";
 export class Canon {
   public readonly handlers = new PrototypeHandlerMap;
 
-  private known = new Set<object>();
+  private known = new WeakSet<object>();
   private pool = new Trie<{
     trace?: any[];
     known?: object;
