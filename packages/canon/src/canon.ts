@@ -64,18 +64,18 @@ export class Canon {
 
       // Although we might like to use component.forEach here, there's no
       // way to terminate a Set.prototype.forEach loop early without
-      // throwing an exception, so we use component.asArray.every instead.
-      component.asArray.every(inputObject => {
+      // throwing an exception, so we use component.asArray.some instead.
+      component.asArray.some(inputObject => {
         if (this.isCanonical(this.scan(inputObject, map.infoMap))) {
           // This implies the entire component has already been canonized,
-          // so we can terminate the component.asArray.every loop early.
-          return false;
+          // so we can terminate the component.asArray.some loop early.
+          return true;
         }
         // This object still needs to be repaired and frozen before it can
         // be admitted into this.known.
         newlyAdmitted.push(inputObject as any);
-        // Continue the component.asArray.every loop.
-        return true;
+        // Continue the component.asArray.some loop.
+        return false;
       });
 
       newlyAdmitted.forEach(getKnown);
