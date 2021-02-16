@@ -34,16 +34,21 @@ export class Canon {
       if (this.isCanonical(input)) return input;
       const info = map.infoMap.get(input);
       const known = info && info.known;
-      if (known) {
+      if (info && known) {
         if (gotten.has(known)) return known;
         gotten.add(known);
         if (!this.isCanonical(known)) {
           // Finish reconstructing the empty known object by translating any
           // unknown object children to their known canonical forms.
-          this.handlers.lookup(input)!.refill.call(
-            known,
-            info!.children.map(getKnown),
-          );
+          if (info.refilled) {
+            info.children.forEach(getKnown);
+          } else {
+            info.refilled = true;
+            this.handlers.lookup(input)!.refill.call(
+              known,
+              info.children.map(getKnown),
+            );
+          }
           // Freeze the repaired known object and officially admit it into
           // the canon of known canonical objects.
           try {
@@ -142,9 +147,10 @@ export class Canon {
       // root object. This style of construction is necessary for types
       // like Buffer that are immutable upon construction, and thus cannot
       // ever contain references back to themselves.
-      node.known = handlers.empty
-        ? handlers.empty()
-        : handlers.refill(rootInfo.children.map(
+      if (handlers.empty) {
+        node.known = handlers.empty();
+      } else {
+        node.known = handlers.refill(rootInfo.children.map(
           // The children of immediately-constructible objects should
           // never be in a cycle with the object itself, because that
           // would imply the object must have existed before its children
@@ -158,6 +164,9 @@ export class Canon {
           // always be a fully canonized value.
           child => this.scan(child, infoMap),
         )) as object;
+        // Make sure we don't call handlers.refill again later.
+        rootInfo.refilled = true;
+      }
     }
 
     return rootInfo.known = node.known as Root;

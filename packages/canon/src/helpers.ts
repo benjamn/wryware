@@ -6,6 +6,7 @@ export interface Info {
   // Set of all objects the same strongly connected component.
   component: Component;
   known?: object;
+  refilled?: true;
 }
 
 export function last<T>(array: ArrayLike<T>): T {
