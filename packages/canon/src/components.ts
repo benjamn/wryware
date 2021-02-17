@@ -35,10 +35,10 @@ export function buildComponentInfoMap(
     // record those nodes as a strongly-connected component.
     const compStack: object[] = [];
 
-    (function dfs(v: object) {
-      if (canon.isCanonical(v)) return;
+    (function depthFirstScan(input: object) {
+      if (canon.isCanonical(input)) return;
 
-      const info = map.infoMap.get(v);
+      const info = map.infoMap.get(input);
       if (info) {
         // We've seen this node before, either because we just found a
         // cycle, or just because there are multiple paths to this node.
@@ -47,17 +47,17 @@ export function buildComponentInfoMap(
         // time (in the number of edges).
         if (!info.component) {
           // If we have not yet assigned info.component, that means we are
-          // still exploring the component that contains v, and it must be
+          // still exploring the component that contains input, and it must be
           // in the same component as any nodes visited after it along our
-          // current path. Since those later nodes cannot be the root of
-          // the current component, we discard them from rootStack, which
-          // removes them from consideration as possible root nodes of
-          // this component. Note that v may not necessarily end up as
-          // last(rootStack), since it may already have been removed in
-          // favor of an even earlier root node. When we remove nodes from
-          // rootStack, they remain "stranded" in compStack, so we can
-          // collect them later into a component, once the recursion
-          // finally unwinds back to the root node of the component.
+          // current path. Since those later nodes cannot be the root of the
+          // current component, we discard them from rootStack, which removes
+          // them from consideration as possible root nodes of this component.
+          // Note that input may not necessarily end up as last(rootStack),
+          // since it may already have been removed in favor of an even
+          // earlier root node.  When we remove nodes from rootStack, they
+          // remain "stranded" in compStack, so we can collect them later into
+          // a component, once the recursion finally unwinds back to the root
+          // node of the component.
           while (
             rootStack.length > 0 &&
             map.infoMap.get(last(rootStack))!.order > info.order
@@ -66,7 +66,7 @@ export function buildComponentInfoMap(
           }
         }
       } else {
-        const handlers = canon.handlers.lookup(v);
+        const handlers = canon.handlers.lookup(input);
         const deconstruct = handlers && handlers.deconstruct;
         if (!deconstruct) return;
 
@@ -74,37 +74,31 @@ export function buildComponentInfoMap(
         // its info.order number and push it onto both stacks.
         const info = {
           order: nextOrder++,
-          children: deconstruct(v),
+          children: deconstruct(input),
         } as Info;
 
-        map.infoMap.set(v, info);
-        rootStack.push(v);
-        compStack.push(v);
+        map.infoMap.set(input, info);
+        rootStack.push(input);
+        compStack.push(input);
 
-        // Recursively traverse the object children of v. Note that the
-        // order in which we visit the children here does not matter for
-        // the output of the getInfoMap function.
-        info.children.forEach(child => {
-          if (!canon.isCanonical(child)) {
-            dfs(child);
-          }
-        });
+        // Recursively traverse the object children of input.
+        info.children.forEach(depthFirstScan);
 
-        // If v is part of a strongly connected component that contains no
-        // references to nodes visited previously, that component will be
-        // finalized by the time we finish traversing v, so rootStack and
-        // compStack will be left in the same state as before the
-        // recursion. In other words, last(rootStack) and last(compStack)
-        // will both be === v at this point. In this common case, we pop v
-        // from both rootStack and compStack, effectively undoing the
-        // stack.push(v) calls above. If v is part of the component we are
-        // currently exploring, v may have been removed from rootStack, so
-        // this condition may fail, which means we will not capture the
-        // current component until later, when the recursion unwinds back
-        // to the root node of the component.
-        if (last(rootStack) === v) {
+        // If input is part of a strongly connected component that contains
+        // no references to nodes visited previously, that component will be
+        // finalized by the time we finish traversing input, so rootStack and
+        // compStack will be left in the same state as before the recursion.
+        // In other words, last(rootStack) and last(compStack) will both be
+        // === input at this point. In this common case, we pop input from
+        // both rootStack and compStack, undoing the stack.push(input) calls
+        // above. If input is part of the component we are currently
+        // exploring, input may have been removed from rootStack, so this
+        // condition may fail, which means we will not capture the current
+        // component until later, when the recursion unwinds back to the root
+        // node of the component.
+        if (last(rootStack) === input) {
           rootStack.pop();
-          const array = compStack.splice(compStack.lastIndexOf(v));
+          const array = compStack.splice(compStack.lastIndexOf(input));
           const component = new Set(array) as Component;
           component.asArray = array;
           // Now that we have finalized this component, assign it to every
