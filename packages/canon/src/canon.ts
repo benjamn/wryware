@@ -32,34 +32,44 @@ export class Canon {
     const gotten = new Set<object>();
     const getKnown = (input: object): object => {
       if (this.isCanonical(input)) return input;
-      const info = map.infoMap.get(input);
+
+      const info = map.infoMap.get(input)!;
       const known = info && info.known;
-      if (info && known) {
+      if (known) {
+        // Multiple input objects (and thus multiple Info objects) can end
+        // up with the same info.known reference, so it's important to
+        // store known references in the gotten set, rather than input
+        // references, to prevent reconstructing the same known object
+        // more than once. Idempotence matters not only for performance,
+        // but also to avoid attempting to modify reconstructed objects
+        // after they've been canonized and frozen.
         if (gotten.has(known)) return known;
         gotten.add(known);
+
+        // Translate info.children from input references to known references.
+        // We do this step even if info.finished, because the children might
+        // contain objects that need to be reconstructed/frozen/admitted.
+        const knownChildren = info.children.map(getKnown);
+
+        // If this input object was previously finished (see the end of
+        // this.scan), don't bother reconstructing it.
+        if (info.finished) return known;
+        info.finished = true;
+
         if (!this.isCanonical(known)) {
-          // Finish reconstructing the empty known object by translating any
-          // unknown object children to their known canonical forms.
-          if (info.refilled) {
-            info.children.forEach(getKnown);
-          } else {
-            info.refilled = true;
-            this.handlers.lookup(input)!.refill.call(
-              known,
-              info.children.map(getKnown),
-            );
-          }
-          // Freeze the repaired known object and officially admit it into
-          // the canon of known canonical objects.
-          try {
-            Object.freeze(known);
-          } finally {
-            this.known.add(known);
-            return known;
-          }
+          // Finish reconstructing the empty known object by translating
+          // any unknown object children to their known canonical forms.
+          const { reconstruct } = this.handlers.lookup(input)!;
+          reconstruct(known, knownChildren);
+
+          // Freeze the reconstructed known object and officially admit it
+          // into the canon of known canonical objects.
+          this.known.add(Object.freeze(known));
         }
+
         return known;
       }
+
       return input;
     };
 
@@ -134,23 +144,26 @@ export class Canon {
 
     const node = this.pool.lookupArray(traces);
     if (!node.known) {
-      const handlers = this.handlers.lookup(root)!;
-      // If handlers.empty is defined, use it to create a new empty
-      // instance of the desired type, to be filled in later. Any type of
-      // object that can contain references back to itself must define
-      // handlers.empty, because the only way to (re)create a structure
-      // containing cycles is to start with an acyclic mutable object, and
-      // then modify it to refer (perhaps indirectly) back to itself. If
-      // handlers.empty is not defined, we instead call handlers.refill to
-      // construct the instance immediately, under the assumption that
-      // none of the children in rootInfo.children are in a cycle with the
-      // root object. This style of construction is necessary for types
-      // like Buffer that are immutable upon construction, and thus cannot
-      // ever contain references back to themselves.
-      if (handlers.empty) {
-        node.known = handlers.empty();
+      const { reconstruct } = this.handlers.lookup(root)!;
+      // If handlers.reconstruct returns an object when called *without*
+      // passing an array of children, that object will be used as the
+      // canonical node.known reference for the root object, possibly
+      // empty or incomplete, to be patched up later, once we have the
+      // known references for every object in this component. Any type of
+      // object that can contain references back to itself must be able to
+      // return an incomplete copy of itself, because the only way to
+      // (re)create a structure containing cycles is to start with an
+      // acyclic mutable object, and then modify it to refer (perhaps
+      // indirectly) back to itself. If empty is undefined, we immediately
+      // call handlers.reconstruct again, this time passing an array of
+      // children. This style of construction is necessary for types like
+      // Buffer that are immutable upon construction, and thus cannot
+      // simply be patched up later.
+      const empty = reconstruct(root);
+      if (empty) {
+        node.known = empty;
       } else {
-        node.known = handlers.refill(rootInfo.children.map(
+        node.known = reconstruct(root, rootInfo.children.map(
           // The children of immediately-constructible objects should
           // never be in a cycle with the object itself, because that
           // would imply the object must have existed before its children
@@ -164,8 +177,8 @@ export class Canon {
           // always be a fully canonized value.
           child => this.scan(child, infoMap),
         )) as object;
-        // Make sure we don't call handlers.refill again later.
-        rootInfo.refilled = true;
+        // Make sure we don't call handlers.reconstruct again later.
+        rootInfo.finished = true;
       }
     }
 

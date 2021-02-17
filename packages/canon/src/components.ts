@@ -67,13 +67,14 @@ export function buildComponentInfoMap(
         }
       } else {
         const handlers = canon.handlers.lookup(v);
-        if (!handlers) return;
+        const deconstruct = handlers && handlers.deconstruct;
+        if (!deconstruct) return;
 
         // We are encountering this node for the first time, so we assign
         // its info.order number and push it onto both stacks.
         const info = {
           order: nextOrder++,
-          children: handlers.toArray(v),
+          children: deconstruct(v),
         } as Info;
 
         map.infoMap.set(v, info);

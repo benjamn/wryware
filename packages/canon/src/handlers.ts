@@ -15,27 +15,35 @@ export class PrototypeHandlerMap {
 
   constructor() {
     this.enable(Array.prototype, {
-      toArray: array => array,
-      empty: () => [],
-      refill(array) {
-        this.push.apply(this, array);
+      deconstruct(array) {
+        return array;
       },
+      reconstruct(empty, children) {
+        if (children) {
+          empty.push.apply(empty, children);
+        } else {
+          return [];
+        }
+      }
     });
 
     const self = this;
     const objectProtos = [null, Object.prototype];
     objectProtos.forEach(proto => this.enable(proto, {
-      toArray(obj) {
+      deconstruct(obj: Record<string, any>) {
         const keys = self.sortedKeys(obj);
-        const array = [keys.json];
-        keys.sorted.forEach(key => array.push((obj as any)[key]));
-        return array;
+        const children = [keys.json];
+        keys.sorted.forEach(key => children.push(obj[key]));
+        return children;
       },
-      empty: () => Object.create(proto),
-      refill(array) {
-        self.keysByJSON.get(array[0])!.sorted.forEach((key, i) => {
-          (this as any)[key] = array[i + 1];
-        });
+      reconstruct(empty: Record<string, any>, children) {
+        if (children) {
+          self.keysByJSON.get(children[0])!.sorted.forEach((key, i) => {
+            empty[key] = children[i + 1];
+          });
+        } else {
+          return Object.create(proto);
+        }
       },
     }));
   }
@@ -43,9 +51,8 @@ export class PrototypeHandlerMap {
   public enable<P extends object, C extends any[]>(
     prototype: P | null,
     handlers: {
-      toArray: (instance: P) => C;
-      empty?: () => P,
-      refill: (this: P, array: C) => P | void;
+      deconstruct(instance: P): C;
+      reconstruct(instance: P, array?: C): P | void;
     },
   ) {
     if (this.usedPrototypes.has(prototype)) {

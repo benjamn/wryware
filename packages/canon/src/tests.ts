@@ -197,16 +197,18 @@ describe("Canon", () => {
     harmlessCycle.self = harmlessCycle;
 
     canon.handlers.enable(Buffer.prototype, {
-      toArray(buffer) {
+      deconstruct(buffer) {
         return [buffer.toString("base64"), harmlessCycle];
       },
-      refill(array) {
-        assert.ok(equal(array[1], harmlessCycle));
-        assert.notStrictEqual(harmlessCycle, array[1]);
-        assert.strictEqual(array[1], array[1].self);
-        assert.ok(canon.isCanonical(array[1]));
-
-        return Buffer.from(array[0], "base64");
+      reconstruct(ignored, children) {
+        assert.ok(Buffer.isBuffer(ignored));
+        if (children) {
+          assert.ok(equal(children[1], harmlessCycle));
+          assert.notStrictEqual(harmlessCycle, children[1]);
+          assert.strictEqual(children[1], children[1].self);
+          assert.ok(canon.isCanonical(children[1]));
+          return Buffer.from(children[0], "base64");
+        }
       },
     });
 
@@ -230,11 +232,12 @@ describe("Canon", () => {
     const canon = new Canon;
 
     canon.handlers.enable(RegExp.prototype, {
-      toArray(pattern) {
-        return [pattern.source, pattern.flags];
+      deconstruct(regExp) {
+        return [regExp.source, regExp.flags];
       },
-      refill(array) {
-        return new RegExp(array[0], array[1]);
+      reconstruct(regExp, children) {
+        assert.ok(regExp instanceof RegExp);
+        return children && new RegExp(children[0], children[1]);
       },
     });
 
@@ -288,16 +291,17 @@ describe("Canon", () => {
     const expectedError = new Error("Cannot enable prototype that has already been looked up");
     assert.throws(() => {
       canon.handlers.enable(Set.prototype, {
-        toArray(set) {
+        deconstruct(set) {
           const array: any[] = [];
           set.forEach(item => array.push(item));
           return array;
         },
-        empty() {
-          return new Set;
-        },
-        refill(array) {
-          array.forEach(this.add, this);
+        reconstruct(set, children) {
+          if (children) {
+            children.forEach(set.add, set);
+          } else {
+            return new Set;
+          }
         },
       });
     }, expectedError);
