@@ -20,7 +20,8 @@ export class PrototypeHandlerMap {
       },
       reconstruct(empty, children) {
         if (children) {
-          empty.push.apply(empty, children);
+          empty.length = children.length;
+          children.forEach((child, i) => empty[i] = child);
         } else {
           return [];
         }

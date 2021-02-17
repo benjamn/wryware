@@ -82,6 +82,29 @@ describe("Canon", () => {
     );
   });
 
+  it("preserves array holes", () => {
+    const canon = new Canon;
+    const input = [0, /*hole*/, 2, void 0, 4, /*hole*/,];
+    const admitted = canon.admit({
+      first: input,
+      second: input,
+    });
+    function check(array: any[]) {
+      assert.strictEqual(input.length, array.length);
+      assert.ok(equal(input, array));
+      assert.ok(equal(array, input));
+      assert.strictEqual(0 in array, true);
+      assert.strictEqual(1 in array, false);
+      assert.strictEqual(2 in array, true);
+      assert.strictEqual(3 in array, true); // void is not a hole
+      assert.strictEqual(4 in array, true);
+      assert.strictEqual(5 in array, false);
+    }
+    check(admitted.first);
+    check(admitted.second);
+    assert.strictEqual(admitted.first, admitted.second);
+  });
+
   it("can admit objects that symmetrically reference each other", () => {
     const canon = new Canon;
 
