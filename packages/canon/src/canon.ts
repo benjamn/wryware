@@ -12,12 +12,6 @@ export class Canon {
     known?: object;
   }>(true);
 
-  public isCanonical(value: any): boolean {
-    return !isObjectOrArray(value) ||
-      this.known.has(value) ||
-      !this.handlers.lookup(value);
-  }
-
   public admit<T>(value: T): T;
   public admit(value: any) {
     if (this.isCanonical(value)) {
@@ -28,8 +22,14 @@ export class Canon {
     )(value);
   }
 
+  public isCanonical(value: any): boolean {
+    return !isObjectOrArray(value) ||
+      this.known.has(value) ||
+      !this.handlers.lookup(value);
+  }
+
   private scanComponents(map: ComponentInfoMap) {
-    const gotten = new Set<object>();
+    const knownSet = new Set<object>();
     const getKnown = (input: object): object => {
       if (this.isCanonical(input)) return input;
 
@@ -38,13 +38,13 @@ export class Canon {
       if (known) {
         // Multiple input objects (and thus multiple Info objects) can end
         // up with the same info.known reference, so it's important to
-        // store known references in the gotten set, rather than input
+        // store known references in the knownSet, rather than input
         // references, to prevent reconstructing the same known object
         // more than once. Idempotence matters not only for performance,
         // but also to avoid attempting to modify reconstructed objects
         // after they've been canonized and frozen.
-        if (gotten.has(known)) return known;
-        gotten.add(known);
+        if (knownSet.has(known)) return known;
+        knownSet.add(known);
 
         // Translate info.children from input references to known references.
         // We do this step even if info.finished, because the children might
@@ -93,12 +93,16 @@ export class Canon {
         return false;
       });
 
+      // Finish reconstructing any newly-admitted canonical objects.
       newlyAdmitted.forEach(getKnown);
     });
 
     return getKnown;
   }
 
+  // Returns the canonical object corresponding to the structure of the given
+  // root object. This canonical object may still need further modifications,
+  // but the reference itself will be the final reference.
   private scan<Root extends object>(
     root: Root,
     infoMap: ComponentInfoMap["infoMap"],
@@ -118,13 +122,41 @@ export class Canon {
       const info = infoMap.get(input);
       if (!info) return input;
 
+      // To avoid endlessly traversing cycles, and also to avoid
+      // re-traversing nodes reachable by more than one path, we return a
+      // Number object representing the index of previously seen input
+      // objects. We use Number references instead of primitive numbers
+      // because references cannot be mistaken for ordinary values found
+      // in the input graph. Unfortunately, depth-first scans starting
+      // from different root objects will encounter previously seen
+      // objects in different places, along different paths, so these
+      // numeric references are only meaningful within the traces array of
+      // this particular root object. This sensitivity of depth-first
+      // traversals to their starting points is the fundamental reason we
+      // have to do a separate O(|component|) scan starting from each
+      // object in a given strongly connected component. If there was some
+      // cheap way to reuse/adapt the traces array of one object as the
+      // traces arrays of other objects within the same component, the
+      // canonization algorithm could perhaps take closer to linear time,
+      // rather than taking time proportional to the sum of the squares of
+      // the sizes of the strongly connected components (which is linear
+      // for acyclic graphs, but quadratic for highly interconnected
+      // graphs with a small number of large components).
       if (seen.has(input)) return seen.get(input)!;
       const nextTraceIndex = traces.length;
       seen.set(input, numRef(nextTraceIndex));
 
-      const handlers = this.handlers.lookup(input);
-      if (!handlers) return input;
-
+      // Each object we encounter during the scan is identified by a trace
+      // array starting with the object's prototype (whose identity is
+      // handled like a Map key, never canonized), followed by the scanned
+      // children returned by handlers.deconstruct(input). Children that
+      // are already canonical, or that belong to components other than
+      // rootInfo.component, can be included directly in the trace array,
+      // but children in the same rootInfo.component must be recursively
+      // scanned, so they can be identified by their canonical structures
+      // rather than by their referential identities (since those
+      // identities cannot be computed without first computing the
+      // identities of every other object in the component, a paradox).
       const trace = [Object.getPrototypeOf(input)];
       info.children.forEach(child => {
         if (this.isCanonical(child)) {
@@ -136,13 +168,29 @@ export class Canon {
         }
       });
 
+      // If we've seen an object with this exact structure before, append
+      // the existing node.trace array onto traces. Otherwise append the
+      // trace array we just created.
       const node = this.pool.lookupArray(trace);
       return traces[nextTraceIndex] = node.trace || (node.trace = trace);
     };
 
+    // If scan(root) returns the input object unmodified, it must already
+    // be canonical, so we can return it immediately. This should never
+    // happen, but, if it did happen, the traces array would not be fully
+    // populated, so we definitely don't want to proceed any further.
     if (scan(root) === root) return root;
 
+    // Look up the traces array, which represents a canonical depth-first
+    // scan of the root object (canonical in the sense that it does not
+    // depend on any references in the current rootInfo.component, but
+    // merely on the structures of those objects).
     const node = this.pool.lookupArray(traces);
+
+    // If we've ever seen an object with the same structure before,
+    // node.known will already be populated with the canonical form of
+    // that object. Otherwise, we use handlers.reconstruct to produce a
+    // new canonical reference to serve as node.known.
     if (!node.known) {
       const { reconstruct } = this.handlers.lookup(root)!;
       // If handlers.reconstruct returns an object when called *without*
@@ -151,20 +199,19 @@ export class Canon {
       // empty or incomplete, to be patched up later, once we have the
       // known references for every object in this component. Any type of
       // object that can contain references back to itself must be able to
-      // return an incomplete copy of itself, because the only way to
-      // (re)create a structure containing cycles is to start with an
-      // acyclic mutable object, and then modify it to refer (perhaps
-      // indirectly) back to itself. If empty is undefined, we immediately
-      // call handlers.reconstruct again, this time passing an array of
-      // children. This style of construction is necessary for types like
-      // Buffer that are immutable upon construction, and thus cannot
-      // simply be patched up later.
+      // be reconstructed in this way, because the only way to (re)create
+      // a structure containing cycles is to start with an acyclic mutable
+      // object, and then modify it to refer (perhaps indirectly) back to
+      // itself. If empty is undefined, we call handlers.reconstruct
+      // again, passing an array of children. This style of construction
+      // is necessary for types like Buffer that are immutable upon
+      // construction, and thus cannot be patched up later.
       const empty = reconstruct(root);
       if (empty) {
         node.known = empty;
       } else {
         node.known = reconstruct(root, rootInfo.children.map(
-          // The children of immediately-constructible objects should
+          // The children of an immediately-constructible object should
           // never be in a cycle with the object itself, because that
           // would imply the object must have existed before its children
           // were created, even though the children are required to create
@@ -172,7 +219,7 @@ export class Canon {
           // topological order, starting with the leaves of the component
           // graph (which is acylic by construction), and child is assumed
           // to be in a separate component from rootInfo.component, we
-          // must already have processed the component that contains
+          // should already have processed the component that contains
           // child, so the result of this.scan(child, infoMap) should
           // always be a fully canonized value.
           child => this.scan(child, infoMap),
