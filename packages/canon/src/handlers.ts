@@ -5,20 +5,20 @@ type Handlers =
   | ThreeStepHandlers;
 
 type TwoStepHandlers<
-  P extends object = object,
-  C extends any[] = any[],
+  Object extends object = object,
+  Children extends any[] = any[],
 > = {
-  deconstruct(instance: P): C;
-  reconstruct(array: C): P;
+  deconstruct(instance: Object): Children;
+  reconstruct(array: Children): Object;
 };
 
 type ThreeStepHandlers<
-  P extends object = object,
-  C extends any[] = any[],
+  Object extends object = object,
+  Children extends any[] = any[],
 > = {
-  deconstruct(instance: P): C;
-  clone(instance: P): P;
-  repair(clone: P, array: C): void;
+  deconstruct(instance: Object): Children;
+  clone(instance: Object): Object;
+  repair(clone: Object, array: Children): void;
 };
 
 export function isTwoStep(
@@ -76,14 +76,14 @@ export class PrototypeHandlerMap {
     }));
   }
 
-  public enable<P extends object, C extends any[]>(
-    prototype: P | null,
-    handlers: ThreeStepHandlers<P, C>,
+  public enable<Object extends object, Children extends any[]>(
+    prototype: Object | null,
+    handlers: TwoStepHandlers<Object, Children>,
   ): void;
 
-  public enable<P extends object, C extends any[]>(
-    prototype: P | null,
-    handlers: TwoStepHandlers<P, C>,
+  public enable<Object extends object, Children extends any[]>(
+    prototype: Object | null,
+    handlers: ThreeStepHandlers<Object, Children>,
   ): void;
 
   public enable(prototype: object, handlers: Handlers) {
