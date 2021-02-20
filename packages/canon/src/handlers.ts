@@ -1,14 +1,43 @@
 import { Trie } from "@wry/trie";
 
-type Handlers = Parameters<PrototypeHandlerMap["enable"]>[1];
+type Handlers =
+  | TwoStepHandlers
+  | ThreeStepHandlers;
 
-type SortedKeysInfo = {
-  sorted: string[];
-  json: string;
+type TwoStepHandlers<
+  P extends object = object,
+  C extends any[] = any[],
+> = {
+  deconstruct(instance: P): C;
+  reconstruct(array: C): P;
+};
+
+type ThreeStepHandlers<
+  P extends object = object,
+  C extends any[] = any[],
+> = {
+  deconstruct(instance: P): C;
+  clone(instance: P): P;
+  repair(clone: P, array: C): void;
+};
+
+export function isTwoStep(
+  handlers: Handlers | undefined,
+): handlers is TwoStepHandlers {
+  const reconstruct = handlers && (handlers as TwoStepHandlers).reconstruct;
+  return typeof reconstruct === "function";
+};
+
+export function isThreeStep(
+  handlers: Handlers | undefined,
+): handlers is ThreeStepHandlers {
+  const clone = handlers && (handlers as ThreeStepHandlers).clone;
+  return typeof clone === "function";
 };
 
 export class PrototypeHandlerMap {
   private map = new Map<object | null, Handlers>();
+  private usedPrototypes = new Set<object | null>();
   private keyTrie = new Trie<{
     keys?: SortedKeysInfo;
   }>(false);
@@ -18,14 +47,13 @@ export class PrototypeHandlerMap {
       deconstruct(array) {
         return array;
       },
-      reconstruct(empty, children) {
-        if (children) {
-          empty.length = children.length;
-          children.forEach((child, i) => empty[i] = child);
-        } else {
-          return [];
-        }
-      }
+      clone() {
+        return [];
+      },
+      repair(empty, children) {
+        empty.length = children.length;
+        children.forEach((child, i) => empty[i] = child);
+      },
     });
 
     const self = this;
@@ -37,32 +65,34 @@ export class PrototypeHandlerMap {
         keys.sorted.forEach(key => children.push(obj[key]));
         return children;
       },
-      reconstruct(empty: Record<string, any>, children) {
-        if (children) {
-          self.keysByJSON.get(children[0])!.sorted.forEach((key, i) => {
-            empty[key] = children[i + 1];
-          });
-        } else {
-          return Object.create(proto);
-        }
+      clone() {
+        return Object.create(proto);
+      },
+      repair(empty: Record<string, any>, children) {
+        self.keysByJSON.get(children[0])!.sorted.forEach((key, i) => {
+          empty[key] = children[i + 1];
+        });
       },
     }));
   }
 
   public enable<P extends object, C extends any[]>(
     prototype: P | null,
-    handlers: {
-      deconstruct(instance: P): C;
-      reconstruct(instance: P, array?: C): P | void;
-    },
-  ) {
+    handlers: ThreeStepHandlers<P, C>,
+  ): void;
+
+  public enable<P extends object, C extends any[]>(
+    prototype: P | null,
+    handlers: TwoStepHandlers<P, C>,
+  ): void;
+
+  public enable(prototype: object, handlers: Handlers) {
     if (this.usedPrototypes.has(prototype)) {
       throw new Error("Cannot enable prototype that has already been looked up");
     }
     this.map.set(prototype, Object.freeze(handlers) as any);
   }
 
-  private usedPrototypes = new Set<object | null>();
   public lookup(instance: object) {
     const proto = Object.getPrototypeOf(instance);
     this.usedPrototypes.add(proto);
@@ -89,3 +119,8 @@ export class PrototypeHandlerMap {
   // the same SortedKeysInfo object, to save memory.
   private keysByJSON = new Map<string, SortedKeysInfo>();
 }
+
+type SortedKeysInfo = {
+  sorted: string[];
+  json: string;
+};

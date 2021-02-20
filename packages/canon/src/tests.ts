@@ -223,15 +223,12 @@ describe("Canon", () => {
       deconstruct(buffer) {
         return [buffer.toString("base64"), harmlessCycle];
       },
-      reconstruct(ignored, children) {
-        assert.ok(Buffer.isBuffer(ignored));
-        if (children) {
-          assert.ok(equal(children[1], harmlessCycle));
-          assert.notStrictEqual(harmlessCycle, children[1]);
-          assert.strictEqual(children[1], children[1].self);
-          assert.ok(canon.isCanonical(children[1]));
-          return Buffer.from(children[0], "base64");
-        }
+      reconstruct(children) {
+        assert.ok(equal(children[1], harmlessCycle));
+        assert.notStrictEqual(harmlessCycle, children[1]);
+        assert.strictEqual(children[1], children[1].self);
+        assert.ok(canon.isCanonical(children[1]));
+        return Buffer.from(children[0], "base64");
       },
     });
 
@@ -258,9 +255,8 @@ describe("Canon", () => {
       deconstruct(regExp) {
         return [regExp.source, regExp.flags];
       },
-      reconstruct(regExp, children) {
-        assert.ok(regExp instanceof RegExp);
-        return children && new RegExp(children[0], children[1]);
+      reconstruct(children) {
+        return new RegExp(children[0], children[1]);
       },
     });
 
@@ -319,12 +315,11 @@ describe("Canon", () => {
           set.forEach(item => array.push(item));
           return array;
         },
-        reconstruct(set, children) {
-          if (children) {
-            children.forEach(set.add, set);
-          } else {
-            return new Set;
-          }
+        clone() {
+          return new Set;
+        },
+        repair(set, children) {
+          children.forEach(set.add, set);
         },
       });
     }, expectedError);

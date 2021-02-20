@@ -1,7 +1,7 @@
 import { Trie } from "@wry/trie";
 import { buildComponentInfoMap, ComponentInfoMap } from "./components";
 import { isObjectOrArray, numRef } from "./helpers";
-import { PrototypeHandlerMap } from "./handlers";
+import { PrototypeHandlerMap, isTwoStep, isThreeStep } from "./handlers";
 
 export class Canon {
   public readonly handlers = new PrototypeHandlerMap;
@@ -57,14 +57,20 @@ export class Canon {
         info.finished = true;
 
         if (!this.isCanonical(known)) {
-          // Finish reconstructing the empty known object by translating
-          // any unknown object children to their known canonical forms.
-          const { reconstruct } = this.handlers.lookup(input)!;
-          reconstruct(known, knownChildren);
+          // Finish reconstructing the known object by passing the
+          // canonical knownChildren to handlers.repair.
+          const handlers = this.handlers.lookup(input);
+          if (isThreeStep(handlers)) {
+            handlers.repair(known, knownChildren);
+            // Freeze the repaired object. Note that this step is skipped
+            // for two-step types like Buffer and RegExp. If a two-step
+            // object type needs to be frozen, its handlers.reconstruct
+            // function should do the freezing.
+            Object.freeze(known);
+          }
 
-          // Freeze the reconstructed known object and officially admit it
-          // into the canon of known canonical objects.
-          this.known.add(Object.freeze(known));
+          // Officially admit the known object into the Canon.
+          this.known.add(known);
         }
 
         return known;
@@ -189,41 +195,43 @@ export class Canon {
 
     // If we've ever seen an object with the same structure before,
     // node.known will already be populated with the canonical form of
-    // that object. Otherwise, we use handlers.reconstruct to produce a
-    // new canonical reference to serve as node.known.
+    // that object. Otherwise, we use handlers.clone (step 2/3) or
+    // handlers.reconstruct (step 2/2) to produce a new canonical
+    // reference to serve as node.known.
     if (!node.known) {
-      const { reconstruct } = this.handlers.lookup(root)!;
-      // If handlers.reconstruct returns an object when called *without*
-      // passing an array of children, that object will be used as the
-      // canonical node.known reference for the root object, possibly
-      // empty or incomplete, to be patched up later, once we have the
-      // known references for every object in this component. Any type of
-      // object that can contain references back to itself must be able to
-      // be reconstructed in this way, because the only way to (re)create
-      // a structure containing cycles is to start with an acyclic mutable
-      // object, and then modify it to refer (perhaps indirectly) back to
-      // itself. If empty is undefined, we call handlers.reconstruct
-      // again, passing an array of children. This style of construction
-      // is necessary for types like Buffer that are immutable upon
-      // construction, and thus cannot be patched up later.
-      const empty = reconstruct(root);
-      if (empty) {
-        node.known = empty;
-      } else {
-        node.known = reconstruct(root, rootInfo.children.map(
-          // The children of an immediately-constructible object should
-          // never be in a cycle with the object itself, because that
-          // would imply the object must have existed before its children
-          // were created, even though the children are required to create
-          // the object. Because scanComponents processes components in
-          // topological order, starting with the leaves of the component
-          // graph (which is acylic by construction), and child is assumed
-          // to be in a separate component from rootInfo.component, we
-          // should already have processed the component that contains
-          // child, so the result of this.scan(child, infoMap) should
-          // always be a fully canonized value.
+      const handlers = this.handlers.lookup(root)!;
+      if (isThreeStep(handlers)) {
+        // Use handlers.clone to allocate the canonical node.known
+        // reference for the root object, likely still empty/incomplete,
+        // to be patched up later, once we have the known references for
+        // every object in this component. Any type of object that can
+        // contain references back to itself must support handlers.clone,
+        // because the only way to (re)create a structure containing
+        // cycles is to start with an acyclic mutable object, then modify
+        // it to refer back to itself (handlers.repair).
+        node.known = handlers.clone(root);
+
+      } else if (isTwoStep(handlers)) {
+        // Two-step handlers are used for types like Buffer that are
+        // immutable upon construction, and thus cannot be patched up
+        // later using handlers.repair.
+        node.known = handlers.reconstruct(rootInfo.children.map(
+          // The direct children of an immutable-upon-construction object
+          // should never include the object itself, because that would
+          // imply the object existed before it was constructed. Under
+          // this assumption, this.scan(child, infoMap) should always be
+          // able to return a canonical reference for the child, since the
+          // child reference never refers directly to the parent object.
+          // If the child is not in a cycle with root (likely), and thus
+          // belongs to a different component than rootInfo.component,
+          // this.scan(child, infoMap) will immediately return a fully
+          // canonized object. In the unlikely event that the child is in
+          // a cycle with root (and thus belongs to rootInfo.component),
+          // the scanned reference may still be incomplete, and will be
+          // patched up later, in the getKnown function.
           child => this.scan(child, infoMap),
-        )) as object;
+        ));
+
         // Make sure we don't call handlers.reconstruct again later.
         rootInfo.finished = true;
       }
