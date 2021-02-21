@@ -81,23 +81,33 @@ export class Canon {
 
     // TODO Make sure this array is actually sorted in topological order.
     map.components.forEach(component => {
-      const newlyAdmitted: Record<string, unknown>[] = [];
-
-      // Although we might like to use component.forEach here, there's no
-      // way to terminate a Set.prototype.forEach loop early without
-      // throwing an exception, so we use component.asArray.some instead.
-      component.asArray.some(inputObject => {
-        if (this.isCanonical(this.scan(inputObject, map.infoMap))) {
+      const newlyAdmitted: object[] = [];
+      const scanInputObject = (input: object) => {
+        if (this.isCanonical(this.scan(input, map.infoMap))) {
           // This implies the entire component has already been canonized,
           // so we can terminate the component.asArray.some loop early.
           return true;
         }
         // This object still needs to be repaired and frozen before it can
         // be admitted into this.known.
-        newlyAdmitted.push(inputObject as any);
+        newlyAdmitted.push(input);
         // Continue the component.asArray.some loop.
         return false;
+      };
+
+      // Handle all three-step objects first, so we have those references
+      // in hand before reconstructing any immutable two-step objects.
+      const notThreeSteps: object[] = [];
+      const done = component.asArray.some(input => {
+        if (isThreeStep(this.handlers.lookup(input))) {
+          return scanInputObject(input);
+        }
+        notThreeSteps.push(input);
+        return false;
       });
+
+      // Now scan the two-step objects.
+      if (!done) notThreeSteps.some(scanInputObject);
 
       // Finish reconstructing any newly-admitted canonical objects.
       newlyAdmitted.forEach(getKnown);
