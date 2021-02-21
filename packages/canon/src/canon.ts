@@ -195,21 +195,21 @@ export class Canon {
 
     // If we've ever seen an object with the same structure before,
     // node.known will already be populated with the canonical form of
-    // that object. Otherwise, we use handlers.clone (step 2/3) or
+    // that object. Otherwise, we use handlers.allocate (step 2/3) or
     // handlers.reconstruct (step 2/2) to produce a new canonical
     // reference to serve as node.known.
     if (!node.known) {
       const handlers = this.handlers.lookup(root)!;
       if (isThreeStep(handlers)) {
-        // Use handlers.clone to allocate the canonical node.known
+        // Use handlers.allocate to allocate the canonical node.known
         // reference for the root object, likely still empty/incomplete,
         // to be patched up later, once we have the known references for
         // every object in this component. Any type of object that can
-        // contain references back to itself must support handlers.clone,
+        // contain references back to itself must support allocation,
         // because the only way to (re)create a structure containing
         // cycles is to start with an acyclic mutable object, then modify
         // it to refer back to itself (handlers.repair).
-        node.known = handlers.clone(root);
+        node.known = handlers.allocate(root);
 
       } else if (isTwoStep(handlers)) {
         // Two-step handlers are used for types like Buffer that are

@@ -17,8 +17,8 @@ type ThreeStepHandlers<
   Children extends any[] = any[],
 > = {
   deconstruct(instance: Object): Children;
-  clone(instance: Object): Object;
-  repair(clone: Object, array: Children): void;
+  allocate(instance: Object): Object;
+  repair(empty: Object, array: Children): void;
 };
 
 export function isTwoStep(
@@ -31,8 +31,8 @@ export function isTwoStep(
 export function isThreeStep(
   handlers: Handlers | undefined,
 ): handlers is ThreeStepHandlers {
-  const clone = handlers && (handlers as ThreeStepHandlers).clone;
-  return typeof clone === "function";
+  const allocate = handlers && (handlers as ThreeStepHandlers).allocate;
+  return typeof allocate === "function";
 };
 
 export class PrototypeHandlerMap {
@@ -47,7 +47,7 @@ export class PrototypeHandlerMap {
       deconstruct(array) {
         return array;
       },
-      clone() {
+      allocate() {
         return [];
       },
       repair(empty, children) {
@@ -65,7 +65,7 @@ export class PrototypeHandlerMap {
         keys.sorted.forEach(key => children.push(obj[key]));
         return children;
       },
-      clone() {
+      allocate() {
         return Object.create(proto);
       },
       repair(empty: Record<string, any>, children) {

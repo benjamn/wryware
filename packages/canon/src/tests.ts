@@ -315,7 +315,7 @@ describe("Canon", () => {
           set.forEach(item => array.push(item));
           return array;
         },
-        clone() {
+        allocate() {
           return new Set;
         },
         repair(set, children) {
