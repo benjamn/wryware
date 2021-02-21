@@ -1,12 +1,10 @@
-import { Component } from "./components";
-
 export interface Info {
   order: number;
+  handlers: import("./handlers").Handlers;
   children: any[];
   // Set of all objects the same strongly connected component.
-  component: Component;
+  component: import("./components").Component;
   known?: object;
-  finished?: true;
 }
 
 export function last<T>(array: ArrayLike<T>): T {

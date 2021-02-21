@@ -1,7 +1,12 @@
 import { Trie } from "@wry/trie";
-import { buildComponentInfoMap, ComponentInfoMap } from "./components";
-import { isObjectOrArray, numRef } from "./helpers";
-import { PrototypeHandlerMap, isTwoStep, isThreeStep } from "./handlers";
+import { buildComponentInfoMap, Component, ComponentInfoMap } from "./components";
+import { Info, isObjectOrArray, numRef } from "./helpers";
+import {
+  PrototypeHandlerMap,
+  ThreeStepHandlers,
+  isTwoStep,
+  isThreeStep,
+} from "./handlers";
 
 export class Canon {
   public readonly handlers = new PrototypeHandlerMap;
@@ -29,91 +34,70 @@ export class Canon {
   }
 
   private scanComponents(map: ComponentInfoMap) {
-    const knownSet = new Set<object>();
-    const getKnown = (input: object): object => {
-      if (this.isCanonical(input)) return input;
-
-      const info = map.infoMap.get(input)!;
-      const known = info && info.known;
-      if (known) {
-        // Multiple input objects (and thus multiple Info objects) can end
-        // up with the same info.known reference, so it's important to
-        // store known references in the knownSet, rather than input
-        // references, to prevent reconstructing the same known object
-        // more than once. Idempotence matters not only for performance,
-        // but also to avoid attempting to modify reconstructed objects
-        // after they've been canonized and frozen.
-        if (knownSet.has(known)) return known;
-        knownSet.add(known);
-
-        // Translate info.children from input references to known references.
-        // We do this step even if info.finished, because the children might
-        // contain objects that need to be reconstructed/frozen/admitted.
-        const knownChildren = info.children.map(getKnown);
-
-        // If this input object was previously finished (see the end of
-        // this.scan), don't bother reconstructing it.
-        if (info.finished) return known;
-        info.finished = true;
-
-        if (!this.isCanonical(known)) {
-          // Finish reconstructing the known object by passing the
-          // canonical knownChildren to handlers.repair.
-          const handlers = this.handlers.lookup(input);
-          if (isThreeStep(handlers)) {
-            handlers.repair(known, knownChildren);
-            // Freeze the repaired object. Note that this step is skipped
-            // for two-step types like Buffer and RegExp. If a two-step
-            // object type needs to be frozen, its handlers.reconstruct
-            // function should do the freezing.
-            Object.freeze(known);
-          }
-
-          // Officially admit the known object into the Canon.
-          this.known.add(known);
-        }
-
-        return known;
-      }
-
-      return input;
-    };
-
     // TODO Make sure this array is actually sorted in topological order.
     map.components.forEach(component => {
-      const newlyAdmitted: object[] = [];
-      const scanInputObject = (input: object) => {
-        if (this.isCanonical(this.scan(input, map.infoMap))) {
+      this.scanComponent(component, map.infoMap);
+    });
+    return (input: object) => this.scan(input, map.infoMap);
+  }
+
+  private scanComponent(
+    component: Component,
+    infoMap: ComponentInfoMap["infoMap"],
+  ) {
+    const toBeRepaired: Info[] = [];
+    const notThreeSteps: object[] = [];
+
+    // Handle all three-step objects first, so we have those references
+    // in hand before reconstructing any immutable two-step objects.
+    const alreadyCanonized = component.asArray.some(input => {
+      const info = infoMap.get(input)!;
+      if (isThreeStep(info.handlers)) {
+        if (this.isCanonical(this.scan(input, infoMap))) {
           // This implies the entire component has already been canonized,
           // so we can terminate the component.asArray.some loop early.
           return true;
         }
-        // This object still needs to be repaired and frozen before it can
-        // be admitted into this.known.
-        newlyAdmitted.push(input);
-        // Continue the component.asArray.some loop.
-        return false;
-      };
-
-      // Handle all three-step objects first, so we have those references
-      // in hand before reconstructing any immutable two-step objects.
-      const notThreeSteps: object[] = [];
-      const done = component.asArray.some(input => {
-        if (isThreeStep(this.handlers.lookup(input))) {
-          return scanInputObject(input);
-        }
+        toBeRepaired.push(info);
+      } else {
         notThreeSteps.push(input);
-        return false;
-      });
-
-      // Now scan the two-step objects.
-      if (!done) notThreeSteps.some(scanInputObject);
-
-      // Finish reconstructing any newly-admitted canonical objects.
-      newlyAdmitted.forEach(getKnown);
+      }
+      return false;
     });
 
-    return getKnown;
+    // Now scan any two-step objects.
+    if (!alreadyCanonized) {
+      notThreeSteps.some(input => {
+        const known = this.scan(input, infoMap);
+        if (this.isCanonical(known)) return true;
+        this.known.add(known);
+        return false;
+      });
+    }
+
+    if (toBeRepaired.length) {
+      const repaired = new Set<object>();
+
+      toBeRepaired.forEach(info => {
+        // Multiple input objects (and thus multiple Info objects) can end
+        // up with the same info.known reference, so it's important to
+        // store known references in the repaired set, rather than input
+        // references, to prevent reconstructing the same known object
+        // more than once. Idempotence matters not only for performance,
+        // but also to avoid attempting to modify reconstructed objects
+        // after they've been canonized and frozen.
+        if (!info.known || repaired.has(info.known)) return;
+        repaired.add(info.known);
+
+        (info.handlers as ThreeStepHandlers).repair(
+          info.known,
+          info.children.map(child => this.scan(child, infoMap)),
+        );
+
+        // Freeze the known object and officially admit it into the Canon.
+        this.known.add(Object.freeze(info.known));
+      });
+    }
   }
 
   // Returns the canonical object corresponding to the structure of the given
@@ -209,7 +193,8 @@ export class Canon {
     // handlers.reconstruct (step 2/2) to produce a new canonical
     // reference to serve as node.known.
     if (!node.known) {
-      const handlers = this.handlers.lookup(root)!;
+      const { handlers } = rootInfo;
+
       if (isThreeStep(handlers)) {
         // Use handlers.allocate to allocate the canonical node.known
         // reference for the root object, likely still empty/incomplete,
@@ -238,12 +223,9 @@ export class Canon {
           // canonized object. In the unlikely event that the child is in
           // a cycle with root (and thus belongs to rootInfo.component),
           // the scanned reference may still be incomplete, and will be
-          // patched up later, in the getKnown function.
+          // patched up later.
           child => this.scan(child, infoMap),
         ));
-
-        // Make sure we don't call handlers.reconstruct again later.
-        rootInfo.finished = true;
       }
     }
 

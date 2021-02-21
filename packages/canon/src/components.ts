@@ -74,6 +74,7 @@ export function buildComponentInfoMap(
         // its info.order number and push it onto both stacks.
         const info = {
           order: nextOrder++,
+          handlers,
           children: deconstruct(input),
         } as Info;
 

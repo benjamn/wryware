@@ -1,10 +1,10 @@
 import { Trie } from "@wry/trie";
 
-type Handlers =
+export type Handlers =
   | TwoStepHandlers
   | ThreeStepHandlers;
 
-type TwoStepHandlers<
+export type TwoStepHandlers<
   Object extends object = object,
   Children extends any[] = any[],
 > = {
@@ -12,7 +12,7 @@ type TwoStepHandlers<
   reconstruct(array: Children): Object;
 };
 
-type ThreeStepHandlers<
+export type ThreeStepHandlers<
   Object extends object = object,
   Children extends any[] = any[],
 > = {
