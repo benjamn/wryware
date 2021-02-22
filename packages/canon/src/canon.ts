@@ -49,7 +49,7 @@ export class Canon {
     const alreadyCanonized = component.asArray.some(input => {
       const info = infoMap.get(input)!;
       if (isThreeStep(info.handlers)) {
-        if (this.isCanonical(this.scan(input, infoMap))) {
+        if (this.known.has(this.scan(input, infoMap))) {
           // This implies the entire component has already been canonized,
           // so we can terminate the component.asArray.some loop early.
           return true;
@@ -62,10 +62,10 @@ export class Canon {
     });
 
     // Now scan any two-step objects.
-    if (!alreadyCanonized) {
+    if (!alreadyCanonized && notThreeSteps.length) {
       notThreeSteps.some(input => {
         const known = this.scan(input, infoMap);
-        if (this.isCanonical(known)) return true;
+        if (this.known.has(known)) return true;
         this.known.add(known);
         return false;
       });
