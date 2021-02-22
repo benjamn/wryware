@@ -1,6 +1,14 @@
 import { Trie } from "@wry/trie";
-import { buildComponentInfoMap, Component, ComponentInfoMap } from "./components";
-import { getPrototypeOf, Info, isObjectOrArray, numRef } from "./helpers";
+
+import { getPrototypeOf, isObjectOrArray, numRef } from "./helpers";
+
+import {
+  Info,
+  Component,
+  ComponentInfoMap,
+  buildComponentInfoMap,
+} from "./components";
+
 import {
   PrototypeHandlers,
   ThreeStepHandlers,

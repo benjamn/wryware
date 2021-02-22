@@ -1,9 +1,18 @@
 import { Canon } from "./canon";
-import { Info, isObjectOrArray, last } from "./helpers";
+import { isObjectOrArray, last } from "./helpers";
 
 export type Component = Set<object> & {
   asArray: object[];
 };
+
+export interface Info {
+  order: number;
+  handlers: import("./handlers").Handlers;
+  children: any[];
+  // Set of all objects the same strongly connected component.
+  component: Component;
+  known?: object;
+}
 
 export interface ComponentInfoMap {
   infoMap: Map<object, Info>;
