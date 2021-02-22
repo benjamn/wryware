@@ -10,6 +10,11 @@ export interface ComponentInfoMap {
   components: Array<Component>;
 }
 
+// Use Dijkstra's stack-based algorithm for finding strongly connected
+// components in a graph, returning a ComponentInfoMap that associates
+// an Info object with every object in the input graph (map.infoMap),
+// along with a list of all components (map.components) in topological
+// order, leaves first.
 export function buildComponentInfoMap(
   value: any,
   canon: Canon,
@@ -67,15 +72,14 @@ export function buildComponentInfoMap(
         }
       } else {
         const handlers = canon.handlers.lookup(input);
-        const deconstruct = handlers && handlers.deconstruct;
-        if (!deconstruct) return;
+        if (!handlers) return;
 
         // We are encountering this node for the first time, so we assign
         // its info.order number and push it onto both stacks.
         const info = {
           order: nextOrder++,
           handlers,
-          children: deconstruct(input),
+          children: handlers.deconstruct(input),
         } as Info;
 
         map.infoMap.set(input, info);
