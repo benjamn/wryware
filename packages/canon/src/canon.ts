@@ -22,23 +22,19 @@ export class Canon {
     if (this.isCanonical(value)) {
       return value;
     }
-    return this.scanComponents(
-      buildComponentInfoMap(value, this),
-    )(value);
+    const map = buildComponentInfoMap(value, this);
+    // TODO Make sure the map.components array is really sorted in
+    // topological order, leaves first.
+    map.components.forEach(component => {
+      this.scanComponent(component, map.infoMap);
+    });
+    return this.scan(value, map.infoMap);
   }
 
   public isCanonical(value: any): boolean {
     return !isObjectOrArray(value) ||
       this.known.has(value) ||
       !this.handlers.lookup(value);
-  }
-
-  private scanComponents(map: ComponentInfoMap) {
-    // TODO Make sure this array is actually sorted in topological order.
-    map.components.forEach(component => {
-      this.scanComponent(component, map.infoMap);
-    });
-    return (input: object) => this.scan(input, map.infoMap);
   }
 
   private scanComponent(
