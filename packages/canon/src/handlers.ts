@@ -74,6 +74,15 @@ export class PrototypeHandlerMap {
         });
       },
     }));
+
+    this.enable(Date.prototype, {
+      deconstruct(date) {
+        return [date.toJSON()];
+      },
+      reconstruct([json]) {
+        return new Date(json);
+      },
+    });
   }
 
   public enable<Object extends object, Children extends any[]>(

@@ -48,6 +48,30 @@ describe("Canon", () => {
     );
   });
 
+  it("can canonize Date objects", () => {
+    const canon = new Canon;
+    const d1 = new Date;
+    const d2 = new Date(d1.getTime());
+    const d3 = new Date(d1.getTime() + 10);
+    const admitted = canon.admit({
+      d1, d2, d3,
+      dates: [d1, d2, d3],
+    });
+
+    assert.notStrictEqual(d1, admitted.d1);
+    assert.notStrictEqual(d2, admitted.d2);
+    assert.notStrictEqual(d3, admitted.d3);
+    assert.strictEqual(admitted.d1, admitted.d2);
+    assert.notStrictEqual(admitted.d1, admitted.d3);
+    assert.strictEqual(admitted.d1, admitted.dates[0]);
+    assert.strictEqual(admitted.d1, admitted.dates[1]);
+    assert.strictEqual(admitted.d2, admitted.dates[0]);
+    assert.strictEqual(admitted.d2, admitted.dates[1]);
+    assert.strictEqual(admitted.d3, admitted.dates[2]);
+    assert.notStrictEqual(admitted.d1, admitted.dates[2]);
+    assert.notStrictEqual(admitted.d2, admitted.dates[2]);
+  });
+
   it("can admit arrays that contain themselves", () => {
     const canon = new Canon;
 
