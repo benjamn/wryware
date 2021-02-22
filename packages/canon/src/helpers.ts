@@ -7,6 +7,8 @@ export interface Info {
   known?: object;
 }
 
+export const { getPrototypeOf } = Object;
+
 export function last<T>(array: ArrayLike<T>): T {
   return array[array.length - 1];
 }

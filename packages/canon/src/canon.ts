@@ -1,6 +1,6 @@
 import { Trie } from "@wry/trie";
 import { buildComponentInfoMap, Component, ComponentInfoMap } from "./components";
-import { Info, isObjectOrArray, numRef } from "./helpers";
+import { getPrototypeOf, Info, isObjectOrArray, numRef } from "./helpers";
 import {
   PrototypeHandlers,
   ThreeStepHandlers,
@@ -153,7 +153,7 @@ export class Canon {
       // rather than by their referential identities (since those
       // identities cannot be computed without first computing the
       // identities of every other object in the component, a paradox).
-      const trace = [Object.getPrototypeOf(input)];
+      const trace = [getPrototypeOf(input)];
       info.children.forEach(child => {
         if (this.isCanonical(child)) {
           trace.push(child);

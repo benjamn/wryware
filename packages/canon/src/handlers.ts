@@ -1,4 +1,5 @@
 import { Trie } from "@wry/trie";
+import { getPrototypeOf } from "./helpers";
 
 export type Handlers =
   | TwoStepHandlers
@@ -34,8 +35,6 @@ export function isThreeStep(
   const allocate = handlers && (handlers as ThreeStepHandlers).allocate;
   return typeof allocate === "function";
 };
-
-const { getPrototypeOf } = Object;
 
 export class PrototypeHandlers {
   private map = new Map<object | null, Handlers>();
