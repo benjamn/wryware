@@ -2,14 +2,14 @@ import { Trie } from "@wry/trie";
 import { buildComponentInfoMap, Component, ComponentInfoMap } from "./components";
 import { Info, isObjectOrArray, numRef } from "./helpers";
 import {
-  PrototypeHandlerMap,
+  PrototypeHandlers,
   ThreeStepHandlers,
   isTwoStep,
   isThreeStep,
 } from "./handlers";
 
 export class Canon {
-  public readonly handlers = new PrototypeHandlerMap;
+  public readonly handlers = new PrototypeHandlers;
 
   private known = new WeakSet<object>();
   private pool = new Trie<{

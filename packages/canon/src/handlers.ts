@@ -35,7 +35,9 @@ export function isThreeStep(
   return typeof allocate === "function";
 };
 
-export class PrototypeHandlerMap {
+const { getPrototypeOf } = Object;
+
+export class PrototypeHandlers {
   private map = new Map<object | null, Handlers>();
   private usedPrototypes = new Set<object | null>();
   private keyTrie = new Trie<{
@@ -51,14 +53,14 @@ export class PrototypeHandlerMap {
         return [];
       },
       repair(empty, children) {
-        empty.length = children.length;
         children.forEach((child, i) => empty[i] = child);
+        empty.length = children.length;
       },
     });
 
     const self = this;
     const objectProtos = [null, Object.prototype];
-    objectProtos.forEach(proto => this.enable(proto, {
+    objectProtos.forEach(proto => self.enable(proto, {
       deconstruct(obj: Record<string, any>) {
         const keys = self.sortedKeys(obj);
         const children = [keys.json];
@@ -95,7 +97,7 @@ export class PrototypeHandlerMap {
     handlers: ThreeStepHandlers<Object, Children>,
   ): void;
 
-  public enable(prototype: object, handlers: Handlers) {
+  public enable(prototype: object | null, handlers: Handlers) {
     if (this.usedPrototypes.has(prototype)) {
       throw new Error("Cannot enable prototype that has already been looked up");
     }
@@ -103,7 +105,7 @@ export class PrototypeHandlerMap {
   }
 
   public lookup(instance: object) {
-    const proto = Object.getPrototypeOf(instance);
+    const proto = getPrototypeOf(instance);
     this.usedPrototypes.add(proto);
     return this.map.get(proto);
   }
