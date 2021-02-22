@@ -318,6 +318,45 @@ describe("Canon", () => {
     assert.match("xxxyz", admitted.caseSensitive);
   });
 
+  it("allows passing through specific object references", () => {
+    const canon = new Canon;
+
+    const input = {
+      a: canon.pass("a"),
+      b: canon.pass({
+        c: "c",
+        d: "d",
+      }),
+      e: canon.pass([1, 2, 3]),
+    };
+
+    const admitted = canon.admit(input);
+
+    assert.ok(equal(admitted, {
+      a: "a",
+      b: {
+        c: "c",
+        d: "d",
+      },
+      e: [1, 2, 3],
+    }));
+
+    assert.notStrictEqual(input, admitted);
+    assert.strictEqual(input.a, admitted.a);
+    assert.strictEqual(input.b, admitted.b);
+    assert.strictEqual(input.e, admitted.e);
+
+    assert.strictEqual(
+      admitted,
+      canon.admit(input),
+    );
+
+    assert.strictEqual(
+      admitted,
+      canon.admit({ ...admitted }),
+    );
+  });
+
   it("does not allow enabling prototypes if already used", () => {
     const canon = new Canon;
 

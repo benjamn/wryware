@@ -103,7 +103,13 @@ export class PrototypeHandlers {
     this.map.set(prototype, Object.freeze(handlers) as any);
   }
 
+  private ignored = new WeakSet<object>();
+  public ignore(instance: object) {
+    this.ignored.add(instance);
+  }
+
   public lookup(instance: object) {
+    if (this.ignored.has(instance)) return;
     const proto = getPrototypeOf(instance);
     this.usedPrototypes.add(proto);
     return this.map.get(proto);

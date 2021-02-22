@@ -39,6 +39,13 @@ export class Canon {
     return this.scan(value, map.infoMap);
   }
 
+  public pass<T>(value: T): T {
+    if (isObjectOrArray(value) && !this.known.has(value)) {
+      this.handlers.ignore(value);
+    }
+    return value;
+  }
+
   public isCanonical(value: any): boolean {
     return !isObjectOrArray(value) ||
       this.known.has(value) ||
