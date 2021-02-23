@@ -114,6 +114,7 @@ function check(a: any, b: any): boolean {
       return true;
     }
 
+    case '[object AsyncFunction]':
     case '[object Function]': {
       const aCode = fnToStr.call(a);
       if (aCode !== fnToStr.call(b)) {
