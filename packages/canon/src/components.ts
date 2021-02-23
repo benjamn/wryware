@@ -1,8 +1,9 @@
 import { Canon } from "./canon";
-import { isObjectOrArray, last } from "./helpers";
+import { Node, isObjectOrArray, last } from "./helpers";
 
 export type Component = Set<object> & {
   asArray: object[];
+  partitioned?: boolean;
 };
 
 export interface Info {
@@ -11,6 +12,8 @@ export interface Info {
   children: any[];
   // Set of all objects the same strongly connected component.
   component: Component;
+  node?: Node;
+  nodes?: Set<Node>;
   known?: object;
 }
 

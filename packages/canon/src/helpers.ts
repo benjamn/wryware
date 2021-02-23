@@ -1,3 +1,8 @@
+export interface Node {
+  trace?: any[];
+  known?: object;
+}
+
 export const { getPrototypeOf } = Object;
 
 export function last<T>(array: ArrayLike<T>): T {
