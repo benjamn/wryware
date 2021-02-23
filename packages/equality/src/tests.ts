@@ -260,4 +260,58 @@ describe("equality", function () {
       Function.prototype.toString.call(Array.prototype.slice),
     );
   });
+
+  it("should equate async functions with the same code", function () {
+    const fn = async () => 1234;
+    assertEqual(fn, fn);
+    assertEqual(fn, async () => 1234);
+
+    // These functions are behaviorally the same, but there's no way to
+    // decide that question statically.
+    assertNotEqual(
+      async (a: number) => a + 1,
+      async (b: number) => b + 1,
+    );
+
+    assertEqual(
+      { before: 123, async fn() { return 4 }, after: 321 },
+      { after: 321, before: 123, async fn() { return 4 } },
+    );
+  });
+
+  it("should equate generator functions with the same code", function () {
+    const fn = function *() { return yield 1234 };
+    assertEqual(fn, fn);
+    assertEqual(fn, function *() { return yield 1234 });
+
+    // These functions are behaviorally the same, but there's no way to
+    // decide that question statically.
+    assertNotEqual(
+      function *(a: number) { return yield a + 1 },
+      function *(b: number) { return yield b + 1 },
+    );
+
+    assertEqual(
+      { before: 123, *fn() { return 4 }, after: 321 },
+      { after: 321, before: 123, *fn() { return 4 } },
+    );
+  });
+
+  it("should equate async generator functions with the same code", function () {
+    const fn = async function *() { return await (yield 1234) };
+    assertEqual(fn, fn);
+    assertEqual(fn, async function *() { return await (yield 1234) });
+
+    // These functions are behaviorally the same, but there's no way to
+    // decide that question statically.
+    assertNotEqual(
+      async function *(a: number) { return yield a + 1 },
+      async function *(b: number) { return yield b + 1 },
+    );
+
+    assertEqual(
+      { before: 123, async *fn() { return 4 }, after: 321 },
+      { after: 321, before: 123, async *fn() { return 4 } },
+    );
+  });
 });
