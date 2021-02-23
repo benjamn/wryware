@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "@types/mocha": "8.2.1",
-    "@types/node": "14.14.25",
+    "@types/node": "14.14.31",
     "lerna": "3.22.1",
     "mocha": "8.3.0",
     "rimraf": "3.0.2",
