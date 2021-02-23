@@ -134,6 +134,7 @@ describe("Canon", () => {
 
     const a: Record<string, any> = {};
     const b: Record<string, any> = {};
+    const c: Record<string, any> = {};
 
     a.other = b;
     a.self = a;
@@ -141,19 +142,32 @@ describe("Canon", () => {
     b.other = a;
     b.self = b;
 
+    c.self = c;
+    c.other = c;
+
     const a1 = canon.admit(a);
     const b1 = canon.admit(b);
+    const c1 = canon.admit(c);
 
     assert.strictEqual(a1.other, b1);
     assert.strictEqual(a1.self, a1);
     assert.strictEqual(b1.other, a1);
     assert.strictEqual(b1.self, b1);
+    assert.strictEqual(c1.other, c1);
+    assert.strictEqual(c1.self, c1);
 
     assert.ok(equal(a, a1));
     assert.ok(equal(b, b1));
+    assert.ok(equal(c, c1));
+
+    assert.ok(equal(a1, b1));
+    assert.ok(equal(b1, c1));
+    assert.ok(equal(a1, c1));
 
     // This is the REAL magic trick.
     assert.strictEqual(a1, b1);
+    assert.strictEqual(b1, c1);
+    assert.strictEqual(a1, c1);
 
     b.a = a;
     a.b = b;
