@@ -4,6 +4,7 @@ import typescript from 'typescript';
 const globals = {
   __proto__: null,
   tslib: "tslib",
+  assert: "assert",
 };
 
 function external(id) {
@@ -37,4 +38,21 @@ export default [{
     name: "equality",
     globals,
   },
+}, {
+  input: "src/tests.ts",
+  external,
+  output: {
+    file: "lib/tests.cjs.js",
+    format: "cjs",
+    exports: "named",
+    sourcemap: true,
+    name: "equality-tests",
+    globals,
+  },
+  plugins: [
+    typescriptPlugin({
+      typescript,
+      tsconfig: "./tsconfig.test.json",
+    }),
+  ],
 }];
