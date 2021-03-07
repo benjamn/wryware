@@ -1,29 +1,42 @@
 import { Canon } from "./canon";
 import { Node, isObjectOrArray, last } from "./helpers";
 
-export type Component = Set<object> & {
-  asArray: object[];
-  partitioned?: boolean;
-};
-
+// Info objects track various short-lived metadata associated with each
+// input object in a given graph.
 export interface Info {
+  // Ordinal number used only by buildComponentInfoMap.
   order: number;
+  // TwoStepHandlers or ThreeStepHandlers enabled for this object, based
+  // on its prototype (see handlers.ts).
   handlers: import("./handlers").Handlers;
+  // Result of calling info.handlers.deconstruct(object).
   children: any[];
-  // Set of all objects the same strongly connected component.
+  // Set of all objects in the same strongly connected component.
   component: Component;
-  node?: Node;
+  // Set of Node objects such that node.known === info.known. Usually
+  // contains only one Node, except in cases of repetition/symmetry.
   nodes?: Set<Node>;
+  // The goal of the whole algorithm is to populate info.known with the
+  // canonical version of every object in the graph.
   known?: object;
 }
 
+export type Component = Set<object> & {
+  // Reference to the array that was used to create the Set, which is
+  // sometimes more convenient to use than the Set itself.
+  asArray: object[];
+  // Used to make Canon.prototype.partitionComponent idempotent.
+  partitioned?: boolean;
+};
+
 export interface ComponentInfoMap extends Map<object, Info> {}
 
-// Use Dijkstra's stack-based algorithm for finding strongly connected
-// components in a graph, returning a ComponentInfoMap that associates
-// an Info object with every object in the input graph (map.infoMap),
-// along with a list of all components (map.components) in topological
-// order, leaves first.
+// Uses Dijkstra's stack-based algorithm for finding strongly connected
+// components in a graph, returning a ComponentInfoMap that associates an
+// Info object with every input object in the graph rooted at value.
+// Although this is not an algorithm that I (@benjamn) invented, I have
+// commented it for clarity, since so many presentations of this algorithm
+// offer no intuition whatsoever for how it actually works.
 export function buildComponentInfoMap(
   value: any,
   canon: Canon,
