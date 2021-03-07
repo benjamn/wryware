@@ -67,12 +67,19 @@ export class Canon {
       const {
         twoSteps,
         threeSteps,
-      } = this.partitionBySteps(info.component, infoMap);
+      } = this.partitionComponent(info.component, infoMap);
 
+      // Step 2/3 for three-step objects.
+      if (threeSteps && threeSteps.length) {
+        this.allocate(threeSteps, infoMap);
+      }
+
+      // Step 2/2 for two-step objects.
       if (twoSteps && twoSteps.length) {
         this.reconstruct(twoSteps, infoMap);
       }
 
+      // Step 3/3 for three-step objects.
       if (threeSteps && threeSteps.length) {
         this.repair(threeSteps, infoMap);
       }
@@ -85,7 +92,7 @@ export class Canon {
     return info.known;
   }
 
-  private partitionBySteps(
+  private partitionComponent(
     component: Component,
     infoMap: ComponentInfoMap,
   ): {
@@ -102,53 +109,37 @@ export class Canon {
     // the component but have not yet finished.
     component.partitioned = false;
 
-    const twoSteps: object[] = [];
-    const threeSteps: object[] = [];
-
     const nodesByInput = new Map<object, Node>();
     let expectedNodeCount = component.size;
 
     while (true) {
       const seenNodes = new Set<Node>();
       const nextNodesByInput = new Map<object, Node>();
-      const alreadyCanonized = component.asArray.some(input => {
+
+      component.forEach(input => {
         const node = this.lookupNode(input, infoMap, nodesByInput);
-        // What does this tell us about the rest of the component?
-        if (node.known) return true;
         seenNodes.add(node);
         if (nodesByInput.get(input) !== node) {
           nextNodesByInput.set(input, node);
         }
       });
 
-      if (
-        alreadyCanonized ||
-        (seenNodes.size === expectedNodeCount && !nextNodesByInput.size)
-      ) {
-        break;
-      }
-
-      expectedNodeCount = seenNodes.size;
-
       // If we saw fewer Node objects than input objects, that means we
       // found some symmetries within this component, and we must perform
       // the lookup loop again with new labels.
-      nextNodesByInput.forEach((label, input) => {
-        nodesByInput.set(input, label);
-      });
+      if (seenNodes.size < expectedNodeCount || nextNodesByInput.size) {
+        expectedNodeCount = seenNodes.size;
+        nextNodesByInput.forEach((label, input) => {
+          nodesByInput.set(input, label);
+        });
+      } else break;
     }
+
+    const twoSteps: object[] = [];
+    const threeSteps: object[] = [];
 
     forEachUnknown(component.asArray, infoMap, (info, input) => {
       if (isThreeStep(info.handlers)) {
-        // Use handlers.allocate to allocate the canonical node.known
-        // reference for the input object, likely still empty/incomplete,
-        // to be patched up later, once we have the known references for
-        // every object in this component. Any type of object that can
-        // contain references back to itself must support allocation,
-        // because the only way to (re)create a structure containing
-        // cycles is to start with an acyclic mutable object, then modify
-        // it to refer back to itself (handlers.repair).
-        info.known = info.handlers.allocate(input);
         threeSteps.push(input);
       } else if (isTwoStep(info.handlers)) {
         twoSteps.push(input);
@@ -162,13 +153,28 @@ export class Canon {
     return { twoSteps, threeSteps };
   }
 
+  private allocate(
+    threeSteps: object[],
+    infoMap: ComponentInfoMap,
+  ) {
+    forEachUnknown(threeSteps, infoMap, (info, input) => {
+      // Use handlers.allocate to allocate the canonical node.known
+      // reference for the input object, likely still empty/incomplete,
+      // to be patched up later, once we have the known references for
+      // every object in this component. Any type of object that can
+      // contain references back to itself must support allocation,
+      // because the only way to (re)create a structure containing
+      // cycles is to start with an acyclic mutable object, then modify
+      // it to refer back to itself (handlers.repair).
+      info.known = (info.handlers as ThreeStepHandlers).allocate(input);
+    });
+  }
+
   private reconstruct(
     twoSteps: object[],
     infoMap: ComponentInfoMap,
   ) {
     forEachUnknown(twoSteps, infoMap, info => {
-      // TODO What keeps this code from reconstructing the same object
-      // more than once? Need to use node.known to deduplicate too?
       info.known = (info.handlers as TwoStepHandlers).reconstruct(
         info.children.map(child => this.getKnown(child, infoMap)),
       );
@@ -186,15 +192,14 @@ export class Canon {
     // repair existing info.known objects, not skip them.
     threeSteps.forEach(input => {
       const info = infoMap.get(input);
-      if (info && info.known) {
-        // Multiple input objects (and thus multiple Info objects) can end
-        // up with the same info.known reference, so it's important to
-        // store known references in the repaired set (rather than input
-        // references), to prevent repairing the same known object more
-        // than once. This idempotence matters not only for performance
-        // but also to avoid attempting to modify objects after they've
-        // been frozen and canonized.
-        if (repaired.has(info.known)) return;
+      // Multiple input objects (and thus multiple Info objects) can end
+      // up with the same info.known reference, so it's important to
+      // store known references in the repaired set (rather than input
+      // references), to prevent repairing the same known object more
+      // than once. This idempotence matters not only for performance
+      // but also to avoid attempting to modify objects after they've
+      // been frozen and canonized.
+      if (info && info.known && !repaired.has(info.known)) {
         repaired.add(info.known);
 
         (info.handlers as ThreeStepHandlers).repair(
