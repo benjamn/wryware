@@ -124,11 +124,13 @@ export class Canon {
         }
       });
 
+      if (seenNodes.size === expectedNodeCount) break;
+      expectedNodeCount = seenNodes.size;
+
       // If we saw fewer Node objects than input objects, that means we
       // found some symmetries within this component, and we must perform
       // the lookup loop again with new labels.
-      if (seenNodes.size < expectedNodeCount || nextNodesByInput.size) {
-        expectedNodeCount = seenNodes.size;
+      if (nextNodesByInput.size) {
         nextNodesByInput.forEach((label, input) => {
           nodesByInput.set(input, label);
         });
