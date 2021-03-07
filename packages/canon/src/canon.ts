@@ -46,30 +46,15 @@ export class Canon {
     if (this.isCanonical(value)) {
       return value;
     }
-
-    const map = buildComponentInfoMap(value, this);
-
-    // map.components.forEach(component => {
-    //   const {
-    //     twoSteps,
-    //     threeSteps,
-    //   } = this.partitionBySteps(component, map.infoMap);
-
-    //   if (twoSteps && twoSteps.length) {
-    //     this.reconstruct(twoSteps, map.infoMap);
-    //   }
-
-    //   if (threeSteps && threeSteps.length) {
-    //     this.repair(threeSteps, map.infoMap);
-    //   }
-    // });
-
-    return this.getKnown(value, map.infoMap);
+    return this.getKnown(
+      value,
+      buildComponentInfoMap(value, this),
+    );
   }
 
   private getKnown(
     input: object,
-    infoMap: ComponentInfoMap["infoMap"],
+    infoMap: ComponentInfoMap,
   ): object {
     const info = infoMap.get(input);
     if (!info) return input;
@@ -102,7 +87,7 @@ export class Canon {
 
   private partitionBySteps(
     component: Component,
-    infoMap: ComponentInfoMap["infoMap"],
+    infoMap: ComponentInfoMap,
   ): {
     twoSteps?: object[];
     threeSteps?: object[];
@@ -171,7 +156,7 @@ export class Canon {
 
   private reconstruct(
     twoSteps: object[],
-    infoMap: ComponentInfoMap["infoMap"],
+    infoMap: ComponentInfoMap,
   ) {
     forEachUnknown(twoSteps, infoMap, info => {
       // TODO What keeps this code from reconstructing the same object
@@ -185,7 +170,7 @@ export class Canon {
 
   private repair(
     threeSteps: object[],
-    infoMap: ComponentInfoMap["infoMap"],
+    infoMap: ComponentInfoMap,
   ) {
     const repaired = new Set<object>();
 
@@ -217,7 +202,7 @@ export class Canon {
 
   private lookupNode(
     root: object,
-    infoMap: ComponentInfoMap["infoMap"],
+    infoMap: ComponentInfoMap,
     labels?: Map<object, object>,
   ): Node {
     const rootInfo = infoMap.get(root)!;
@@ -303,12 +288,9 @@ export class Canon {
     return node;
   }
 
-  // Returns the canonical object corresponding to the structure of the given
-  // root object. This canonical object may still need further modifications,
-  // but the reference itself will be the final reference.
   private oldScan<Root extends object>(
     root: Root,
-    infoMap: ComponentInfoMap["infoMap"],
+    infoMap: ComponentInfoMap,
   ): Root {
     if (this.isCanonical(root)) return root;
     const rootInfo = infoMap.get(root);
@@ -431,7 +413,7 @@ export class Canon {
           // a cycle with root (and thus belongs to rootInfo.component),
           // the scanned reference may still be incomplete, and will be
           // patched up later.
-          child => this.scan(child, infoMap),
+          child => this.oldScan(child, infoMap),
         ));
       }
     }
@@ -442,7 +424,7 @@ export class Canon {
 
 function forEachUnknown(
   objects: object[],
-  infoMap: ComponentInfoMap["infoMap"],
+  infoMap: ComponentInfoMap,
   callback: (info: Info, input: object) => any,
 ) {
   objects.forEach(input => {

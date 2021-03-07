@@ -17,10 +17,7 @@ export interface Info {
   known?: object;
 }
 
-export interface ComponentInfoMap {
-  infoMap: Map<object, Info>;
-  components: Array<Component>;
-}
+export interface ComponentInfoMap extends Map<object, Info> {}
 
 // Use Dijkstra's stack-based algorithm for finding strongly connected
 // components in a graph, returning a ComponentInfoMap that associates
@@ -31,10 +28,7 @@ export function buildComponentInfoMap(
   value: any,
   canon: Canon,
 ): ComponentInfoMap {
-  const map: ComponentInfoMap = {
-    infoMap: new Map,
-    components: [],
-  };
+  const map: ComponentInfoMap = new Map;
 
   if (isObjectOrArray(value)) {
     let nextOrder = 1;
@@ -55,7 +49,7 @@ export function buildComponentInfoMap(
     (function depthFirstScan(input: object) {
       if (canon.isCanonical(input)) return;
 
-      const info = map.infoMap.get(input);
+      const info = map.get(input);
       if (info) {
         // We've seen this node before, either because we just found a
         // cycle, or just because there are multiple paths to this node.
@@ -77,7 +71,7 @@ export function buildComponentInfoMap(
           // node of the component.
           while (
             rootStack.length > 0 &&
-            map.infoMap.get(last(rootStack))!.order > info.order
+            map.get(last(rootStack))!.order > info.order
           ) {
             rootStack.pop();
           }
@@ -94,7 +88,7 @@ export function buildComponentInfoMap(
           children: handlers.deconstruct(input),
         } as Info;
 
-        map.infoMap.set(input, info);
+        map.set(input, info);
         rootStack.push(input);
         compStack.push(input);
 
@@ -121,9 +115,8 @@ export function buildComponentInfoMap(
           // Now that we have finalized this component, assign it to every
           // node participating in the component.
           component.forEach(elem => {
-            map.infoMap.get(elem)!.component = component;
+            map.get(elem)!.component = component;
           });
-          map.components.push(component);
         }
       }
     })(value);
