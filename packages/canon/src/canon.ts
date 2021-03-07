@@ -109,31 +109,28 @@ export class Canon {
     // the component but have not yet finished.
     component.partitioned = false;
 
-    const nodesByInput = new Map<object, Node>();
+    const labels = new Map<object, Node>();
     let expectedNodeCount = component.size;
 
     while (true) {
       const seenNodes = new Set<Node>();
-      const nextNodesByInput = new Map<object, Node>();
+      const nextLabels = new Map<object, Node>();
 
       component.forEach(input => {
-        const node = this.lookupNode(input, infoMap, nodesByInput);
+        const node = this.lookupNode(input, infoMap, labels);
         seenNodes.add(node);
-        if (nodesByInput.get(input) !== node) {
-          nextNodesByInput.set(input, node);
+        if (labels.get(input) !== node) {
+          nextLabels.set(input, node);
         }
       });
-
-      if (seenNodes.size === expectedNodeCount) break;
-      expectedNodeCount = seenNodes.size;
 
       // If we saw fewer Node objects than input objects, that means we
       // found some symmetries within this component, and we must perform
       // the lookup loop again with new labels.
-      if (nextNodesByInput.size) {
-        nextNodesByInput.forEach((label, input) => {
-          nodesByInput.set(input, label);
-        });
+      if (seenNodes.size < expectedNodeCount &&
+          nextLabels.size) {
+        expectedNodeCount = seenNodes.size;
+        nextLabels.forEach((label, input) => labels.set(input, label));
       } else break;
     }
 
