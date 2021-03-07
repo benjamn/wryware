@@ -140,7 +140,7 @@ export class Canon {
     const twoSteps: object[] = [];
     const threeSteps: object[] = [];
 
-    forEachUnknown(component.asArray, infoMap, (info, input) => {
+    forEachUnknown(component, infoMap, (info, input) => {
       if (isThreeStep(info.handlers)) {
         threeSteps.push(input);
       } else if (isTwoStep(info.handlers)) {
@@ -312,11 +312,11 @@ export class Canon {
 }
 
 function forEachUnknown(
-  objects: object[],
+  objects: Set<object> | object[],
   infoMap: ComponentInfoMap,
   callback: (info: Info, input: object) => any,
 ) {
-  objects.forEach(input => {
+  objects.forEach((input: object) => {
     const info = infoMap.get(input)!;
     if (!info || info.known) return;
 

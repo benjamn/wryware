@@ -22,9 +22,6 @@ export interface Info {
 }
 
 export type Component = Set<object> & {
-  // Reference to the array that was used to create the Set, which is
-  // sometimes more convenient to use than the Set itself.
-  asArray: object[];
   // Used to make Canon.prototype.partitionComponent idempotent.
   partitioned?: boolean;
 };
@@ -124,7 +121,6 @@ export function buildComponentInfoMap(
           rootStack.pop();
           const array = compStack.splice(compStack.lastIndexOf(input));
           const component = new Set(array) as Component;
-          component.asArray = array;
           // Now that we have finalized this component, assign it to every
           // node participating in the component.
           component.forEach(elem => {
