@@ -107,7 +107,10 @@ describe("Trie", function () {
       numberKeys.push(key);
     }
 
-    it("lots of fresh object references added weakly", function () {
+    const nodeMajorVersion = parseInt(process.versions.node.split('.')[0], 10);
+
+    (nodeMajorVersion > 10 ? it : it.skip)
+    ("lots of fresh object references added weakly", function () {
       this.timeout(20000);
       const trie = new Trie<object>(true);
       objectKeys.forEach(key => {
