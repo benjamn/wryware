@@ -6,8 +6,7 @@
 // null-prototype Object.
 const defaultMakeData = () => Object.create(null);
 
-// Useful for processing arguments objects as well as arrays.
-const { forEach, slice } = Array.prototype;
+const { slice } = Array.prototype;
 
 export class Trie<Data> {
   // Since a `WeakMap` cannot hold primitive values as keys, we need a
@@ -27,8 +26,11 @@ export class Trie<Data> {
   }
 
   public lookupArray<T extends IArguments | any[]>(array: T): Data {
+    const { length } = array;
     let node: Trie<Data> = this;
-    forEach.call(array, key => node = node.getChildTrie(key));
+    for (let i = 0; i < length; ++i) {
+      node = node.getChildTrie(array[i]);
+    }
     return node.data || (node.data = this.makeData(slice.call(array)));
   }
 
