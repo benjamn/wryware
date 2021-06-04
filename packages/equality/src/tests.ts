@@ -314,4 +314,66 @@ describe("equality", function () {
       { after: 321, before: 123, async *fn() { return 4 } },
     );
   });
+
+  it('should work for Array Buffers And Typed Arrays', function () {
+    const hello = new Int8Array([1, 2, 3, 4, 5]);
+    const world = new Int8Array([1, 2, 3, 4, 5]);
+    const small = new Int8Array([1, 2, 3, 4])
+    assertEqual(new DataView(new ArrayBuffer(4)), new DataView(new ArrayBuffer(4)))
+    assertEqual(new Int16Array([42]), new Int16Array([42]));
+    assertEqual(new Int32Array(new ArrayBuffer(4)), new Int32Array(new ArrayBuffer(4)))
+    assertEqual(new ArrayBuffer(2), new ArrayBuffer(2))
+    assertNotEqual(new Int16Array([1, 2, 3]), new Int16Array([1, 2]));
+    assertNotEqual(new Int16Array([1, 2, 3]), new Uint16Array([1, 2, 3]))
+    assertNotEqual(new Int16Array([1, 2, 3]), new Int8Array([1, 2, 3]))
+    assertNotEqual(new Int32Array(8), new Uint32Array(8));
+    assertNotEqual(new Int32Array(new ArrayBuffer(8)), new Int32Array(Array.from({ length: 8 })));
+    assertNotEqual(new ArrayBuffer(1), new ArrayBuffer(2));
+    assertEqual(hello, world);
+    assertEqual(hello.buffer, world.buffer);
+    assertEqual(new DataView(hello.buffer), new DataView(world.buffer));
+    assertNotEqual(small, world)
+    assertNotEqual(small.buffer, world.buffer);
+    assertNotEqual(new DataView(small.buffer), new DataView(world.buffer));
+  });
+
+  it('should work with a kitchen sink', function () {
+    const foo = {
+      foo: 'value1',
+      bar: new Set([1, 2, 3]),
+      baz: /foo/i,
+      bat: {
+        hello: new Map([ ['hello', 'world'] ]),
+        world: {
+          aaa: new Map([
+            [{ foo: /bar/ }, 'sub sub value1'],
+          ]),
+          bbb: [1, 2, { prop2:1, prop:2 }, 4, 5]
+        }
+      },
+      quz: new Set([{ a:1 , b:2 }]),
+      qut: new Date(2016, 2, 10),
+      qar: new Uint8Array([1, 2, 3, 4, 5]),
+    }
+
+    const bar = {
+      quz: new Set([{ a:1 , b:2 }]),
+      baz: /foo/i,
+      foo: 'value1',
+      bar: new Set([1, 2, 3]),
+      qar: new Uint8Array([1, 2, 3, 4, 5]),
+      qut: new Date('2016/03/10'),
+      bat: {
+        world: {
+          aaa: new Map([
+            [{ foo: /bar/ }, 'sub sub value1'],
+          ]),
+          bbb: [1, 2, { prop2:1, prop:2 }, 4, 5]
+        },
+        hello: new Map([ ['hello', 'world'] ])
+      }
+    };
+
+    assertNotEqual(foo, bar)
+  })
 });

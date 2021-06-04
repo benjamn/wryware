@@ -35,6 +35,28 @@ function check(a: any, b: any): boolean {
   }
 
   switch (aTag) {
+    case '[object Uint16Array]':
+    case '[object Uint8Array]': // Buffer, in Node.js.
+    case '[object Uint32Array]':
+    case '[object Int32Array]':
+    case '[object Int8Array]':
+    case '[object Int16Array]':
+    case '[object ArrayBuffer]':
+      // DataView doesn't need these conversions, but the equality check is
+      // otherwise the same.
+      a = new Uint8Array(a);
+      b = new Uint8Array(b);
+      // Fall through...
+    case '[object DataView]': {
+      let len = a.byteLength;
+      if (len === b.byteLength) {
+        while (len-- && a[len] === b[len]) {
+          // Keep looping as long as the bytes are equal.
+        }
+      }
+      return len === -1;
+    }
+
     case '[object Array]':
       // Arrays are a lot like other objects, but we can cheaply compare their
       // lengths as a short-cut before comparing their elements.
