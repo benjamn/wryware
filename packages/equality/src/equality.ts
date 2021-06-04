@@ -36,32 +36,32 @@ function check(a: any, b: any): boolean {
 
   switch (aTag) {
     case '[object Uint16Array]':
-    case '[object Uint8Array]':
+    case '[object Uint8Array]': // Buffer, in Node.js.
     case '[object Uint32Array]':
     case '[object Int32Array]':
     case '[object Int8Array]':
     case '[object Int16Array]':
-    case '[object ArrayBuffer]': {
-      let len: number
+    case '[object ArrayBuffer]':
+      // DataView doesn't need these conversions, but the equality check is
+      // otherwise the same.
       a = new Uint8Array(a);
       b = new Uint8Array(b);
-      if ((len=a.byteLength) === b.byteLength) {
-        while (len-- && (a as Uint8Array)[len] === b[len]);
-      }
-      return len === -1;
-    }
+      // Fall through...
     case '[object DataView]': {
-      let len: number
-      if ((len=a.byteLength) === b.byteLength) {
-        while (len-- && a[len] === b[len]);
+      let len = a.byteLength;
+      if (len === b.byteLength) {
+        while (len-- && a[len] === b[len]) {
+          // Keep looping as long as the bytes are equal.
+        }
       }
       return len === -1;
     }
+
     case '[object Array]':
       // Arrays are a lot like other objects, but we can cheaply compare their
       // lengths as a short-cut before comparing their elements.
       if (a.length !== b.length) return false;
-    // Fall through to object case...
+      // Fall through to object case...
     case '[object Object]': {
       if (previouslyCompared(a, b)) return true;
 
@@ -97,7 +97,7 @@ function check(a: any, b: any): boolean {
     case '[object Number]':
       // Handle NaN, which is !== itself.
       if (a !== a) return b !== b;
-    // Fall through to shared +a === +b case...
+      // Fall through to shared +a === +b case...
     case '[object Boolean]':
     case '[object Date]':
       return +a === +b;
