@@ -11,7 +11,7 @@
     "test": "npm run build && lerna run test"
   },
   "devDependencies": {
-    "@types/mocha": "8.2.2",
+    "@types/mocha": "9.0.0",
     "@types/node": "16.4.3",
     "lerna": "4.0.0",
     "mocha": "9.0.3",
