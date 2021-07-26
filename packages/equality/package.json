@@ -22,7 +22,7 @@
     "rollup": "../../node_modules/.bin/rollup -c",
     "build": "npm run clean && npm run tsc && npm run rollup",
     "mocha": "../../scripts/test.sh lib/tests.cjs.js",
-    "prepublish": "npm run build",
+    "prepare": "npm run build",
     "test": "npm run build && npm run mocha"
   },
   "dependencies": {
