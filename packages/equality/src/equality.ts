@@ -1,6 +1,13 @@
-const { toString, hasOwnProperty } = Object.prototype;
 const fnToStr = Function.prototype.toString;
 const previousComparisons = new Map<object, Set<object>>();
+
+const {
+  getPrototypeOf,
+  prototype: {
+    toString,
+    hasOwnProperty,
+  },
+} = Object;
 
 /**
  * Performs a deep equality check on two JavaScript values, tolerating cycles.
@@ -15,6 +22,11 @@ export function equal(a: any, b: any): boolean {
 
 // Allow default imports as well.
 export default equal;
+
+function isPlainObject(obj: any): obj is Record<string, any> {
+  const proto = getPrototypeOf(obj);
+  return proto === null || proto === Object.prototype;
+}
 
 function check(a: any, b: any): boolean {
   // If the two values are strictly equal, our job is easy.
@@ -42,6 +54,11 @@ function check(a: any, b: any): boolean {
       );
 
     case '[object Object]': {
+      if (!isPlainObject(a) ||
+          !isPlainObject(b)) {
+        return false;
+      }
+
       if (previouslyCompared(a, b)) return true;
 
       const aKeys = definedKeys(a);
