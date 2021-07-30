@@ -36,10 +36,11 @@ function check(a: any, b: any): boolean {
 
   switch (aTag) {
     case '[object Array]':
-      // Arrays are a lot like other objects, but we can cheaply compare their
-      // lengths as a short-cut before comparing their elements.
-      if (a.length !== b.length) return false;
-      // Fall through to object case...
+      return previouslyCompared(a, b) || (
+        a.length === b.length &&
+        (a as any[]).every((child, i) => check(child, b[i]))
+      );
+
     case '[object Object]': {
       if (previouslyCompared(a, b)) return true;
 
