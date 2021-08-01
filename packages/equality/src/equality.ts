@@ -23,9 +23,35 @@ export function equal(a: any, b: any): boolean {
 // Allow default imports as well.
 export default equal;
 
+function isNonNullObject(obj: any): obj is Record<string, any> {
+  return obj !== null && typeof obj === "object";
+}
+
+function hasEqualsMethod(obj: any): obj is {
+  equals(that: any): boolean;
+} {
+  return (
+    isNonNullObject(obj) &&
+    typeof obj.equals === "function" &&
+    obj.equals(obj) === true
+  );
+}
+
 function isPlainObject(obj: any): obj is Record<string, any> {
-  const proto = getPrototypeOf(obj);
-  return proto === null || proto === Object.prototype;
+  if (isNonNullObject(obj)) {
+    const proto = getPrototypeOf(obj);
+    return proto === null || proto === Object.prototype;
+  }
+  return false;
+}
+
+function tryEqualsMethod(a: any, b: any): boolean {
+  return (
+    hasEqualsMethod(a) &&
+    hasEqualsMethod(b) &&
+    a.equals(b) &&
+    b.equals(a)
+  );
 }
 
 function check(a: any, b: any): boolean {
@@ -56,7 +82,7 @@ function check(a: any, b: any): boolean {
     case '[object Object]': {
       if (!isPlainObject(a) ||
           !isPlainObject(b)) {
-        return false;
+        return tryEqualsMethod(a, b);
       }
 
       if (previouslyCompared(a, b)) return true;
@@ -188,6 +214,10 @@ function check(a: any, b: any): boolean {
       // even though the runtime function objects are !== to one another.
       return !endsWith(aCode, nativeCodeSuffix);
     }
+  }
+
+  if (isNonNullObject(a) && isNonNullObject(b)) {
+    return tryEqualsMethod(a, b);
   }
 
   // Otherwise the values are not equal.
