@@ -207,7 +207,7 @@ export class DeepChecker {
     return false;
   }
 
-  private hasEqualsMethod(obj: any): obj is Equatable {
+  private isEquatable(obj: any): obj is Equatable {
     return (
       isNonNullObject(obj) &&
       typeof obj.equals === "function" &&
@@ -219,8 +219,8 @@ export class DeepChecker {
 
   private tryEqualsMethod(a: any, b: any): boolean {
     return (
-      this.hasEqualsMethod(a) &&
-      this.hasEqualsMethod(b) &&
+      this.isEquatable(a) &&
+      this.isEquatable(b) &&
       a.equals(b, this.boundCheck) &&
       // Verify symmetry. If a.equals is not exactly the same function as
       // b.equals, b.equals(a) can legitimately disagree with a.equals(b), so we
