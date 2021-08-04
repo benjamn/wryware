@@ -27,13 +27,15 @@ function isNonNullObject(obj: any): obj is Record<string, any> {
   return obj !== null && typeof obj === "object";
 }
 
-function hasEqualsMethod(obj: any): obj is {
-  equals(that: any): boolean;
-} {
+interface Equatable {
+  equals(that: any, helper: typeof check): boolean;
+}
+
+function hasEqualsMethod(obj: any): obj is Equatable {
   return (
     isNonNullObject(obj) &&
     typeof obj.equals === "function" &&
-    obj.equals(obj) === true
+    obj.equals(obj, check) === true
   );
 }
 
@@ -49,8 +51,8 @@ function tryEqualsMethod(a: any, b: any): boolean {
   return (
     hasEqualsMethod(a) &&
     hasEqualsMethod(b) &&
-    a.equals(b) &&
-    b.equals(a)
+    a.equals(b, check) &&
+    b.equals(a, check)
   );
 }
 
