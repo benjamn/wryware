@@ -375,5 +375,37 @@ describe("equality", function () {
     };
 
     assertNotEqual(foo, bar)
-  })
+  });
+
+  describe("performance", function () {
+    const limit = 1e6;
+    this.timeout(20000);
+
+    function check(a: any, bEqual: any, bNotEqual: any) {
+      for (let i = 0; i < limit; ++i) {
+        assert.strictEqual(equal(a, bEqual), true);
+        assert.strictEqual(equal(bEqual, a), true);
+        assert.strictEqual(equal(a, bNotEqual), false);
+        assert.strictEqual(equal(bNotEqual, a), false);
+      }
+    }
+
+    it("should be fast for arrays", function () {
+      const a = [1, 2, 3];
+      check(a, a.slice(0), [1, 2, 4]);
+    });
+
+    it("should be fast for objects", function () {
+      const a = { a: 1, b: 2, c: 3 };
+      check(a, { ...a }, { a: 1, b: 3 });
+    });
+
+    it("should be fast for strings", function () {
+      check('foo', new String('foo'), 'bar');
+    });
+
+    it("should be fast for functions", function () {
+      check(() => 123, () => 123, () => 321);
+    });
+  });
 });
