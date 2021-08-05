@@ -1,4 +1,5 @@
 import assert from "assert";
+import { Equatable } from "./checker";
 import defaultEqual, { equal } from "./equality";
 import { objToStr } from "./helpers";
 
@@ -144,6 +145,76 @@ describe("equality", function () {
     assertNotEqual(c1, c2);
     assertNotEqual(c1, c3);
     assertNotEqual(c2, c3);
+  });
+
+  it("should respect asymmetric a.equals(b) methods", function () {
+    type CheckFn = (a: any, b: any) => boolean;
+
+    class Point2D implements Equatable {
+      constructor(
+        public readonly x: number,
+        public readonly y: number,
+      ) {}
+
+      // It's a shame that we have to provide the parameter types explicitly.
+      equals(that: Point2D, check: CheckFn) {
+        return this === that || (
+          check(this.x, that.x) &&
+          check(this.y, that.y)
+        );
+      }
+    }
+
+    class Point3D extends Point2D implements Equatable<Point3D> {
+      constructor(
+        x: number,
+        y: number,
+        public readonly z: number,
+      ) {
+        super(x, y);
+      }
+
+      equals(that: Point3D, check: CheckFn) {
+        return this === that || (
+          super.equals(that, check) &&
+          check(this.z, that.z)
+        );
+      }
+    }
+
+    const x1y2 = new Point2D(1, 2);
+    const x2y1 = new Point2D(2, 1);
+    const x1y2z0 = new Point3D(1, 2, 0);
+    const x1y2z3 = new Point3D(1, 2, 3);
+
+    assertEqual(x1y2, x1y2);
+    assertEqual(x2y1, x2y1);
+    assertEqual(x1y2z0, x1y2z0);
+    assertEqual(x1y2z3, x1y2z3);
+
+    assert.strictEqual(x1y2.equals(x1y2, equal), true);
+    assert.strictEqual(x2y1.equals(x2y1, equal), true);
+    assert.strictEqual(x1y2z0.equals(x1y2z0, equal), true);
+    assert.strictEqual(x1y2z3.equals(x1y2z3, equal), true);
+
+    assertEqual(x1y2, new Point2D(1, 2));
+    assertEqual(x2y1, new Point2D(2, 1));
+    assertEqual(x1y2z0, new Point3D(1, 2, 0));
+    assertEqual(x1y2z3, new Point3D(1, 2, 3));
+
+    assertNotEqual(x1y2, x2y1);
+    assertNotEqual(x1y2, x1y2z3);
+    assertNotEqual(x2y1, x1y2z0);
+    assertNotEqual(x2y1, x1y2z3);
+    assertNotEqual(x1y2z0, x1y2z3);
+
+    // These are the most interesting cases, because x1y2 thinks it's equal to
+    // both x1y2z0 and x1y2z3, but the equal(a, b) function enforces symmetry.
+    assertNotEqual(x1y2, x1y2z0);
+    assert.strictEqual(x1y2.equals(x1y2z0, equal), true);
+    assert.strictEqual(x1y2.equals(x1y2z3, equal), true);
+    assert.strictEqual(x1y2z0.equals(x1y2 as Point3D, equal), false);
+    assert.strictEqual(x1y2z3.equals(x1y2 as Point3D, equal), false);
   });
 
   it("should work for Error objects", function () {
