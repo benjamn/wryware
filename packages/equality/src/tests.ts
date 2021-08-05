@@ -1,5 +1,6 @@
 import assert from "assert";
 import defaultEqual, { equal } from "./equality";
+import { objToStr } from "./helpers";
 
 function toStr(value: any) {
   try {
@@ -118,6 +119,31 @@ describe("equality", function () {
       b: void 0,
       c: void 0,
     }, {});
+  });
+
+  it("should not equate !== objects with custom prototypes", function () {
+    class Custom {
+      constructor(public readonly number: number) {}
+    }
+
+    const c1 = new Custom(1234);
+    const c2 = new Custom(1234);
+    const c3 = new Custom(2345);
+
+    assertEqual(Object.keys(c1), ["number"]);
+    assertEqual(Object.keys(c2), ["number"]);
+    assertEqual(Object.keys(c3), ["number"]);
+
+    assert.strictEqual(objToStr.call(c1), "[object Object]");
+    assert.strictEqual(objToStr.call(c2), "[object Object]");
+    assert.strictEqual(objToStr.call(c3), "[object Object]");
+
+    assertEqual(c1, c1);
+    assertEqual(c2, c2);
+    assertEqual(c3, c3);
+    assertNotEqual(c1, c2);
+    assertNotEqual(c1, c3);
+    assertNotEqual(c2, c3);
   });
 
   it("should work for Error objects", function () {
