@@ -84,11 +84,11 @@ const makeSlotClass = () => class Slot<TValue> {
 
   // Capture the current context and wrap a callback function so that it
   // reestablishes the captured context when called.
-  static bind<TArgs extends any[], TResult>(
-    callback: (...args: TArgs) => TResult,
+  static bind<TArgs extends any[], TResult, TThis = any>(
+    callback: (this: TThis, ...args: TArgs) => TResult,
   ) {
     const context = currentContext;
-    return function (this: any) {
+    return function (this: TThis) {
       const saved = currentContext;
       try {
         currentContext = context;

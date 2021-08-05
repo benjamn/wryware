@@ -280,15 +280,15 @@ describe("equality", function () {
   });
 
   it("should equate generator functions with the same code", function () {
-    const fn = function *() { return yield 1234 };
+    const fn = function *(): Generator<number> { return yield 1234 };
     assertEqual(fn, fn);
-    assertEqual(fn, function *() { return yield 1234 });
+    assertEqual(fn, function *(): Generator<number> { return yield 1234 });
 
     // These functions are behaviorally the same, but there's no way to
     // decide that question statically.
     assertNotEqual(
-      function *(a: number) { return yield a + 1 },
-      function *(b: number) { return yield b + 1 },
+      function *(a: number): Generator<number> { return yield a + 1 },
+      function *(b: number): Generator<number> { return yield b + 1 },
     );
 
     assertEqual(
@@ -298,15 +298,15 @@ describe("equality", function () {
   });
 
   it("should equate async generator functions with the same code", function () {
-    const fn = async function *() { return await (yield 1234) };
+    const fn = async function *(): AsyncGenerator<number> { return await (yield 1234) };
     assertEqual(fn, fn);
-    assertEqual(fn, async function *() { return await (yield 1234) });
+    assertEqual(fn, async function *(): AsyncGenerator<number> { return await (yield 1234) });
 
     // These functions are behaviorally the same, but there's no way to
     // decide that question statically.
     assertNotEqual(
-      async function *(a: number) { return yield a + 1 },
-      async function *(b: number) { return yield b + 1 },
+      async function *(a: number): AsyncGenerator<number> { return yield a + 1 },
+      async function *(b: number): AsyncGenerator<number> { return yield b + 1 },
     );
 
     assertEqual(

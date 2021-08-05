@@ -337,17 +337,19 @@ describe("asyncFromGen", function () {
     assert.strictEqual(typeof asyncFromGen, "function");
   });
 
-  it("works like an async function", asyncFromGen(function*() {
-    let sum = 0;
-    const limit = yield new Promise(resolve => {
-      setTimeout(() => resolve(10), 10);
-    });
-    for (let i = 0; i < limit; ++i) {
-      sum += yield i + 1;
-    }
-    assert.strictEqual(sum, 55);
-    return Promise.resolve("ok");
-  }));
+  it("works like an async function", asyncFromGen(
+    function*(): Generator<number | Promise<number>, Promise<string>, number> {
+      let sum = 0;
+      const limit = yield new Promise(resolve => {
+        setTimeout(() => resolve(10), 10);
+      });
+      for (let i = 0; i < limit; ++i) {
+        sum += yield i + 1;
+      }
+      assert.strictEqual(sum, 55);
+      return Promise.resolve("ok");
+    },
+  ));
 
   it("properly handles exceptions", async function () {
     const fn = asyncFromGen(function*(throwee?: object) {
