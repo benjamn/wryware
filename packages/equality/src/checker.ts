@@ -14,7 +14,7 @@ export interface Equatable<T = any> {
 
 export class DeepChecker {
   private comparisons: Map<object, Set<object>> | undefined;
-  private boundCheck: DeepChecker["check"] = (a, b) => this.check(a, b);
+  public readonly boundCheck: DeepChecker["check"] = (a, b) => this.check(a, b);
 
   public check(a: any, b: any): boolean {
     // If the two values are strictly equal, our job is easy.
@@ -36,29 +36,26 @@ export class DeepChecker {
 
     switch (aTag) {
       case '[object Array]':
-        return this.checkArrays(a, b);
+        return checkArrays(this, a, b);
 
       case '[object Object]':
-        return this.checkObjects(a, b);
+        return checkObjects(this, a, b);
 
       case '[object Error]':
-        return a.name === b.name && a.message === b.message;
+        return checkErrors(this, a, b);
 
       case '[object Number]':
-        // Handle NaN, which is !== itself.
-        if (a !== a) return b !== b;
-        // Fall through to shared +a === +b case...
       case '[object Boolean]':
       case '[object Date]':
-        return +a === +b;
+        return checkNumbers(this, a, b);
 
       case '[object RegExp]':
       case '[object String]':
-        return a == `${b}`;
+        return checkStringsOrRegExps(this, a, b);
 
       case '[object Map]':
       case '[object Set]':
-        return this.checkMapsOrSets(a, b, aTag);
+        return checkMapsOrSets(this, a, b, aTag);
 
       case '[object Uint16Array]':
       case '[object Uint8Array]': // Buffer, in Node.js.
@@ -67,143 +64,28 @@ export class DeepChecker {
       case '[object Int8Array]':
       case '[object Int16Array]':
       case '[object ArrayBuffer]':
-        return this.checkBytes(
-          // DataView doesn't need these conversions, but the equality check is
-          // otherwise the same.
-          new Uint8Array(a),
-          new Uint8Array(b),
-        );
-
+        return checkArrayBuffers(this, a, b);
       case '[object DataView]':
-        return this.checkBytes(a, b);
+        // DataView doesn't need the checkArrayBuffers conversions, but the
+        // equality check is otherwise the same.
+        return checkBytes(this, a, b);
 
       case '[object AsyncFunction]':
       case '[object GeneratorFunction]':
       case '[object AsyncGeneratorFunction]':
       case '[object Function]':
-        return this.checkFunctions(a, b);
+        return checkFunctions(this, a, b);
     }
 
     if (isNonNullObject(a) && isNonNullObject(b)) {
-      return this.tryEqualsMethod(a, b);
+      return tryEqualsMethod(this, a, b);
     }
 
     // Otherwise the values are not equal.
     return false;
   }
 
-  private checkArrays(a: any[], b: any[]): boolean {
-    return this.previouslyCompared(a, b) || (
-      a.length === b.length &&
-      a.every((child, i) => this.check(child, b[i]))
-    );
-  }
-
-  private checkObjects(a: any, b: any): boolean {
-    if (!isPlainObject(a) ||
-        !isPlainObject(b)) {
-      return this.tryEqualsMethod(a, b);
-    }
-
-    if (this.previouslyCompared(a, b)) return true;
-
-    const aKeys = definedKeys(a);
-    const bKeys = definedKeys(b);
-
-    // If `a` and `b` have a different number of enumerable keys, they
-    // must be different.
-    const keyCount = aKeys.length;
-    if (keyCount !== bKeys.length) return false;
-
-    // Now make sure they have the same keys.
-    for (let k = 0; k < keyCount; ++k) {
-      if (!hasOwn.call(b, aKeys[k])) {
-        return false;
-      }
-    }
-
-    // Finally, check deep equality of all child properties.
-    for (let k = 0; k < keyCount; ++k) {
-      const key = aKeys[k];
-      if (!this.check(a[key], b[key])) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  private checkMapsOrSets(a: any, b: any, tag: string): boolean {
-    if (a.size !== b.size) return false;
-    if (this.previouslyCompared(a, b)) return true;
-
-    const aIterator = a.entries();
-    const isMap = tag === '[object Map]';
-
-    while (true) {
-      const info = aIterator.next();
-      if (info.done) break;
-
-      // If a instanceof Set, aValue === aKey.
-      const [aKey, aValue] = info.value;
-
-      // So this works the same way for both Set and Map.
-      if (!b.has(aKey)) {
-        return false;
-      }
-
-      // However, we care about deep equality of values only when dealing
-      // with Map structures.
-      if (isMap && !this.check(aValue, b.get(aKey))) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  private checkBytes(a: Uint8Array, b: Uint8Array): boolean {
-    let len = a.byteLength;
-    if (len === b.byteLength) {
-      while (len-- && a[len] === b[len]) {
-        // Keep looping as long as the bytes are equal.
-      }
-    }
-    return len === -1;
-  }
-
-  private checkFunctions(a: any, b: any): boolean  {
-    const aCode = fnToStr.call(a);
-    if (aCode !== fnToStr.call(b)) {
-      return false;
-    }
-
-    // We consider non-native functions equal if they have the same code
-    // (native functions require === because their code is censored). Note
-    // that this behavior is not entirely sound, since !== function objects
-    // with the same code can behave differently depending on their closure
-    // scope. However, any function can behave differently depending on the
-    // values of its input arguments (including this) and its calling
-    // context (including its closure scope), even though the function
-    // object is === to itself; and it is entirely possible for functions
-    // that are not === to behave exactly the same under all conceivable
-    // circumstances. Because none of these factors are statically decidable
-    // in JavaScript, JS function equality is not well-defined. This
-    // ambiguity allows us to consider the best possible heuristic among
-    // various imperfect options, and equating non-native functions that
-    // have the same code has enormous practical benefits, such as when
-    // comparing functions that are repeatedly passed as fresh function
-    // expressions within objects that are otherwise deeply equal. Since any
-    // function created from the same syntactic expression (in the same code
-    // location) will always stringify to the same code according to
-    // fnToStr.call, we can reasonably expect these repeatedly passed
-    // function expressions to have the same code, and thus behave "the
-    // same" (with all the caveats mentioned above), even though the runtime
-    // function objects are !== to one another.
-    return !isNativeCode(aCode);
-  }
-
-  private previouslyCompared(a: any, b: any): boolean {
+  public previouslyCompared(a: any, b: any): boolean {
     this.comparisons = this.comparisons || new Map;
     // Though cyclic references can make an object graph appear infinite from
     // the perspective of a depth-first traversal, the graph still contains a
@@ -224,27 +106,168 @@ export class DeepChecker {
     bSet.add(b);
     return false;
   }
+}
 
-  private isEquatable(obj: any): obj is Equatable {
-    return (
-      isNonNullObject(obj) &&
-      typeof obj.equals === "function" &&
-      // Verify reflexivity. This should be cheap as long as obj.equals(obj)
-      // checks obj === obj first.
-      obj.equals(obj, this.boundCheck)
-    );
+function isEquatable(checker: DeepChecker, obj: any): obj is Equatable {
+  return (
+    isNonNullObject(obj) &&
+    typeof obj.equals === "function" &&
+    // Verify reflexivity. This should be cheap as long as obj.equals(obj)
+    // checks obj === obj first.
+    obj.equals(obj, checker.boundCheck)
+  );
+}
+
+function tryEqualsMethod(checker: DeepChecker, a: any, b: any): boolean {
+  return (
+    isEquatable(checker, a) &&
+    isEquatable(checker, b) &&
+    a.equals(b, checker.boundCheck) &&
+    // Verify symmetry. If a.equals is not exactly the same function as
+    // b.equals, b.equals(a) can legitimately disagree with a.equals(b), so we
+    // must check both. When a.equals === b.equals, the additional check should
+    // be redundant, unless that .equals method is somehow asymmetric.
+    (a.equals === b.equals || b.equals(a, checker.boundCheck))
+  );
+}
+
+function checkArrays(checker: DeepChecker, a: any[], b: any[]): boolean {
+  return checker.previouslyCompared(a, b) || (
+    a.length === b.length &&
+    a.every((child, i) => checker.check(child, b[i]))
+  );
+}
+
+function checkObjects(checker: DeepChecker, a: object, b: object): boolean {
+  if (!isPlainObject(a) ||
+      !isPlainObject(b)) {
+    return tryEqualsMethod(checker, a, b);
   }
 
-  private tryEqualsMethod(a: any, b: any): boolean {
-    return (
-      this.isEquatable(a) &&
-      this.isEquatable(b) &&
-      a.equals(b, this.boundCheck) &&
-      // Verify symmetry. If a.equals is not exactly the same function as
-      // b.equals, b.equals(a) can legitimately disagree with a.equals(b), so we
-      // must check both. When a.equals === b.equals, the additional check should
-      // be redundant, unless that .equals method is somehow asymmetric.
-      (a.equals === b.equals || b.equals(a, this.boundCheck))
-    );
+  if (checker.previouslyCompared(a, b)) return true;
+
+  const aKeys = definedKeys(a);
+  const bKeys = definedKeys(b);
+
+  // If `a` and `b` have a different number of enumerable keys, they
+  // must be different.
+  const keyCount = aKeys.length;
+  if (keyCount !== bKeys.length) return false;
+
+  // Now make sure they have the same keys.
+  for (let k = 0; k < keyCount; ++k) {
+    if (!hasOwn.call(b, aKeys[k])) {
+      return false;
+    }
   }
+
+  // Finally, check deep equality of all child properties.
+  for (let k = 0; k < keyCount; ++k) {
+    const key = aKeys[k];
+    if (!checker.check(a[key], b[key])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function checkErrors(_: DeepChecker, a: Error, b: Error): boolean {
+  return a.name === b.name && a.message === b.message;
+}
+
+function checkNumbers(_: DeepChecker, a: number, b: number): boolean {
+  return a !== a
+    ? b !== b // Handle NaN, which is !== itself.
+    : +a === +b;
+}
+
+function checkStringsOrRegExps<T extends string | RegExp>(
+  _: DeepChecker,
+  a: T,
+  b: T,
+): boolean {
+  return a == `${b}`;
+}
+
+function checkMapsOrSets<T extends Map<any, any> | Set<any>>(
+  checker: DeepChecker,
+  a: T,
+  b: T,
+  tag: string,
+): boolean {
+  if (a.size !== b.size) return false;
+  if (checker.previouslyCompared(a, b)) return true;
+
+  const aIterator = a.entries();
+  const isMap = tag === '[object Map]';
+
+  while (true) {
+    const info = aIterator.next();
+    if (info.done) break;
+
+    // If a instanceof Set, aValue === aKey.
+    const [aKey, aValue] = info.value;
+
+    // So this works the same way for both Set and Map.
+    if (!b.has(aKey)) {
+      return false;
+    }
+
+    // However, we care about deep equality of values only when dealing
+    // with Map structures.
+    if (isMap && !checker.check(aValue, (b as Map<any, any>).get(aKey))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function checkArrayBuffers(checker: DeepChecker, a: ArrayBuffer, b: ArrayBuffer): boolean {
+  return checkBytes(
+    checker,
+    new Uint8Array(a),
+    new Uint8Array(b),
+  );
+}
+
+function checkBytes(_: DeepChecker, a: Uint8Array, b: Uint8Array): boolean {
+  let len = a.byteLength;
+  if (len === b.byteLength) {
+    while (len-- && a[len] === b[len]) {
+      // Keep looping as long as the bytes are equal.
+    }
+  }
+  return len === -1;
+}
+
+function checkFunctions(_: DeepChecker, a: any, b: any): boolean  {
+  const aCode = fnToStr.call(a);
+  if (aCode !== fnToStr.call(b)) {
+    return false;
+  }
+
+  // We consider non-native functions equal if they have the same code (native
+  // functions require === because their code is censored). Note that this
+  // behavior is not entirely sound, since !== function objects with the same
+  // code can behave differently depending on their closure scope. However, any
+  // function can behave differently depending on the values of its input
+  // arguments (including this) and its calling context (including its closure
+  // scope), even though the function object is === to itself; and it is
+  // entirely possible for functions that are not === to behave exactly the same
+  // under all conceivable circumstances. Because none of these factors are
+  // statically decidable in JavaScript, JS function equality is not
+  // well-defined. This ambiguity allows us to consider the best possible
+  // heuristic among various imperfect options, and equating non-native
+  // functions that have the same code has enormous practical benefits, such as
+  // when comparing functions that are repeatedly passed as fresh function
+  // expressions within objects that are otherwise deeply equal. Since any
+  // function created from the same syntactic expression (in the same code
+  // location) will always stringify to the same code according to fnToStr.call,
+  // we can reasonably expect these repeatedly passed function expressions to
+  // have the same code, and thus behave "the same" (with all the caveats
+  // mentioned above), even though the runtime function objects are !== to one
+  // another.
+  return !isNativeCode(aCode);
 }
