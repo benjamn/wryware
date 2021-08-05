@@ -147,6 +147,34 @@ describe("equality", function () {
     assertNotEqual(c2, c3);
   });
 
+  it("should respect custom a.equals(b) methods for unknown Symbol.toStringTag", function () {
+    class Tagged {
+      [Symbol.toStringTag] = "Tagged";
+
+      constructor(private value: any) {}
+
+      equals(that: Tagged) {
+        return this.value === that.value;
+      }
+    }
+
+    const t1a = new Tagged(1);
+    const t1b = new Tagged(1);
+    const t2a = new Tagged(2);
+    const t2b = new Tagged(2);
+
+    assert.strictEqual(objToStr.call(t1a), "[object Tagged]");
+    assert.strictEqual(objToStr.call(t2b), "[object Tagged]");
+
+    assertEqual(t1a, t1b);
+    assertEqual(t2a, t2b);
+
+    assertNotEqual(t1a, t2a);
+    assertNotEqual(t1a, t2b);
+    assertNotEqual(t1b, t2a);
+    assertNotEqual(t1b, t2b);
+  });
+
   it("should respect asymmetric a.equals(b) methods", function () {
     type CheckFn = (a: any, b: any) => boolean;
 
