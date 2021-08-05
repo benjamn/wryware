@@ -12,6 +12,44 @@ export interface Equatable<T = any> {
   equals(that: T, helper: DeepChecker["check"]): boolean;
 }
 
+type Checker<T> = (
+  checker: DeepChecker,
+  a: T,
+  b: T,
+  tag: string,
+) => boolean;
+
+const CHECKERS_BY_TAG = new Map<string, Checker<any>>()
+  .set('[object Array]', checkArrays)
+  .set('[object Object]', checkObjects)
+  .set('[object Error]', checkErrors)
+
+  .set('[object Number]', checkNumbers)
+  .set('[object Boolean]', checkNumbers)
+  .set('[object Date]', checkNumbers)
+
+  .set('[object RegExp]', checkStringsOrRegExps)
+  .set('[object String]', checkStringsOrRegExps)
+
+  .set('[object Map]', checkMapsOrSets)
+  .set('[object Set]', checkMapsOrSets)
+
+  .set('[object Uint16Array]', checkArrayBuffers)
+  .set('[object Uint8Array]', checkArrayBuffers)
+  .set('[object Uint32Array]', checkArrayBuffers)
+  .set('[object Int32Array]', checkArrayBuffers)
+  .set('[object Int8Array]', checkArrayBuffers)
+  .set('[object Int16Array]', checkArrayBuffers)
+  .set('[object ArrayBuffer]', checkArrayBuffers)
+  // DataView doesn't need the checkArrayBuffers conversions, but the equality
+  // check is otherwise the same.
+  .set('[object DataView]', checkBytes)
+
+  .set('[object AsyncFunction]', checkFunctions)
+  .set('[object GeneratorFunction]', checkFunctions)
+  .set('[object AsyncGeneratorFunction]', checkFunctions)
+  .set('[object Function]', checkFunctions);
+
 export class DeepChecker {
   private comparisons: Map<object, Set<object>> | undefined;
   public readonly boundCheck: DeepChecker["check"] = (a, b) => this.check(a, b);
@@ -34,47 +72,9 @@ export class DeepChecker {
       return false;
     }
 
-    switch (aTag) {
-      case '[object Array]':
-        return checkArrays(this, a, b);
-
-      case '[object Object]':
-        return checkObjects(this, a, b);
-
-      case '[object Error]':
-        return checkErrors(this, a, b);
-
-      case '[object Number]':
-      case '[object Boolean]':
-      case '[object Date]':
-        return checkNumbers(this, a, b);
-
-      case '[object RegExp]':
-      case '[object String]':
-        return checkStringsOrRegExps(this, a, b);
-
-      case '[object Map]':
-      case '[object Set]':
-        return checkMapsOrSets(this, a, b, aTag);
-
-      case '[object Uint16Array]':
-      case '[object Uint8Array]': // Buffer, in Node.js.
-      case '[object Uint32Array]':
-      case '[object Int32Array]':
-      case '[object Int8Array]':
-      case '[object Int16Array]':
-      case '[object ArrayBuffer]':
-        return checkArrayBuffers(this, a, b);
-      case '[object DataView]':
-        // DataView doesn't need the checkArrayBuffers conversions, but the
-        // equality check is otherwise the same.
-        return checkBytes(this, a, b);
-
-      case '[object AsyncFunction]':
-      case '[object GeneratorFunction]':
-      case '[object AsyncGeneratorFunction]':
-      case '[object Function]':
-        return checkFunctions(this, a, b);
+    const checker = CHECKERS_BY_TAG.get(aTag);
+    if (checker) {
+      return checker(this, a, b, aTag);
     }
 
     if (isNonNullObject(a) && isNonNullObject(b)) {
