@@ -9,7 +9,7 @@ import {
 } from "./helpers";
 
 export interface Equatable<T = any> {
-  equals(that: T, helper: DeepChecker["check"]): boolean;
+  deepEquals(that: T, helper: DeepChecker["check"]): boolean;
 }
 
 type Checker<T> = (
@@ -111,10 +111,10 @@ export class DeepChecker {
 function isEquatable(checker: DeepChecker, obj: any): obj is Equatable {
   return (
     isNonNullObject(obj) &&
-    typeof obj.equals === "function" &&
-    // Verify reflexivity. This should be cheap as long as obj.equals(obj)
+    typeof obj.deepEquals === "function" &&
+    // Verify reflexivity. This should be cheap as long as obj.deepEquals(obj)
     // checks obj === obj first.
-    obj.equals(obj, checker.boundCheck)
+    obj.deepEquals(obj, checker.boundCheck)
   );
 }
 
@@ -122,12 +122,14 @@ function tryEqualsMethod(checker: DeepChecker, a: any, b: any): boolean {
   return (
     isEquatable(checker, a) &&
     isEquatable(checker, b) &&
-    a.equals(b, checker.boundCheck) &&
-    // Verify symmetry. If a.equals is not exactly the same function as
-    // b.equals, b.equals(a) can legitimately disagree with a.equals(b), so we
-    // must check both. When a.equals === b.equals, the additional check should
-    // be redundant, unless that .equals method is somehow asymmetric.
-    (a.equals === b.equals || b.equals(a, checker.boundCheck))
+    a.deepEquals(b, checker.boundCheck) &&
+    // Verify symmetry. If a.deepEquals is not exactly the same function as
+    // b.deepEquals, b.deepEquals(a) can legitimately disagree with
+    // a.deepEquals(b), so we must check both. When a.deepEquals ===
+    // b.deepEquals, the additional check should be redundant, unless that
+    // .deepEquals method is somehow asymmetric.
+    (a.deepEquals === b.deepEquals ||
+     b.deepEquals(a, checker.boundCheck))
   );
 }
 

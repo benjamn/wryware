@@ -147,13 +147,13 @@ describe("equality", function () {
     assertNotEqual(c2, c3);
   });
 
-  it("should respect custom a.equals(b) methods for unknown Symbol.toStringTag", function () {
+  it("should respect custom a.deepEquals(b) methods for unknown Symbol.toStringTag", function () {
     class Tagged {
       [Symbol.toStringTag] = "Tagged";
 
       constructor(private value: any) {}
 
-      equals(that: Tagged) {
+      deepEquals(that: Tagged) {
         return this.value === that.value;
       }
     }
@@ -175,8 +175,8 @@ describe("equality", function () {
     assertNotEqual(t1b, t2b);
   });
 
-  it("should respect asymmetric a.equals(b) methods", function () {
-    type CheckFn = (a: any, b: any) => boolean;
+  it("should respect asymmetric a.deepEquals(b) methods", function () {
+    type EqualFn = (a: any, b: any) => boolean;
 
     class Point2D implements Equatable {
       constructor(
@@ -185,10 +185,10 @@ describe("equality", function () {
       ) {}
 
       // It's a shame that we have to provide the parameter types explicitly.
-      equals(that: Point2D, check: CheckFn) {
+      deepEquals(that: Point2D, equal: EqualFn) {
         return this === that || (
-          check(this.x, that.x) &&
-          check(this.y, that.y)
+          equal(this.x, that.x) &&
+          equal(this.y, that.y)
         );
       }
     }
@@ -202,10 +202,10 @@ describe("equality", function () {
         super(x, y);
       }
 
-      equals(that: Point3D, check: CheckFn) {
+      deepEquals(that: Point3D, equal: EqualFn) {
         return this === that || (
-          super.equals(that, check) &&
-          check(this.z, that.z)
+          super.deepEquals(that, equal) &&
+          equal(this.z, that.z)
         );
       }
     }
@@ -220,10 +220,10 @@ describe("equality", function () {
     assertEqual(x1y2z0, x1y2z0);
     assertEqual(x1y2z3, x1y2z3);
 
-    assert.strictEqual(x1y2.equals(x1y2, equal), true);
-    assert.strictEqual(x2y1.equals(x2y1, equal), true);
-    assert.strictEqual(x1y2z0.equals(x1y2z0, equal), true);
-    assert.strictEqual(x1y2z3.equals(x1y2z3, equal), true);
+    assert.strictEqual(x1y2.deepEquals(x1y2, equal), true);
+    assert.strictEqual(x2y1.deepEquals(x2y1, equal), true);
+    assert.strictEqual(x1y2z0.deepEquals(x1y2z0, equal), true);
+    assert.strictEqual(x1y2z3.deepEquals(x1y2z3, equal), true);
 
     assertEqual(x1y2, new Point2D(1, 2));
     assertEqual(x2y1, new Point2D(2, 1));
@@ -239,10 +239,10 @@ describe("equality", function () {
     // These are the most interesting cases, because x1y2 thinks it's equal to
     // both x1y2z0 and x1y2z3, but the equal(a, b) function enforces symmetry.
     assertNotEqual(x1y2, x1y2z0);
-    assert.strictEqual(x1y2.equals(x1y2z0, equal), true);
-    assert.strictEqual(x1y2.equals(x1y2z3, equal), true);
-    assert.strictEqual(x1y2z0.equals(x1y2 as Point3D, equal), false);
-    assert.strictEqual(x1y2z3.equals(x1y2 as Point3D, equal), false);
+    assert.strictEqual(x1y2.deepEquals(x1y2z0, equal), true);
+    assert.strictEqual(x1y2.deepEquals(x1y2z3, equal), true);
+    assert.strictEqual(x1y2z0.deepEquals(x1y2 as Point3D, equal), false);
+    assert.strictEqual(x1y2z3.deepEquals(x1y2 as Point3D, equal), false);
   });
 
   it("should work for Error objects", function () {
