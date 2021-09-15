@@ -11,7 +11,7 @@ function toStr(value: any) {
 }
 
 function assertEqual(a: any, b: any) {
-  assert.strictEqual(equal(a, b), true, `unexpectedly not equal(${toStr(a)}}, ${toStr(b)})`);
+  assert.strictEqual(equal(a, b), true, `unexpectedly not equal(${toStr(a)}, ${toStr(b)})`);
   assert.strictEqual(equal(b, a), true, `unexpectedly not equal(${toStr(b)}, ${toStr(a)})`);
 }
 
