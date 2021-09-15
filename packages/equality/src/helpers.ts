@@ -1,5 +1,7 @@
 import { DeepChecker } from "./checker";
 
+export type DeepEqualsHelper = DeepChecker["check"];
+
 export interface Equatable<T = any> {
   deepEquals(that: T, helper: DeepChecker["check"]): boolean;
 }

@@ -1,6 +1,6 @@
 import assert from "assert";
 import defaultEqual, { equal } from "./equality";
-import { Equatable, objToStr } from "./helpers";
+import { Equatable, DeepEqualsHelper, objToStr } from "./helpers";
 
 function toStr(value: any) {
   try {
@@ -175,8 +175,6 @@ describe("equality", function () {
   });
 
   it("should respect asymmetric a.deepEquals(b) methods", function () {
-    type EqualFn = (a: any, b: any) => boolean;
-
     class Point2D implements Equatable {
       constructor(
         public readonly x: number,
@@ -184,7 +182,7 @@ describe("equality", function () {
       ) {}
 
       // It's a shame that we have to provide the parameter types explicitly.
-      deepEquals(that: Point2D, equal: EqualFn) {
+      deepEquals(that: Point2D, equal: DeepEqualsHelper) {
         return this === that || (
           equal(this.x, that.x) &&
           equal(this.y, that.y)
@@ -201,7 +199,7 @@ describe("equality", function () {
         super(x, y);
       }
 
-      deepEquals(that: Point3D, equal: EqualFn) {
+      deepEquals(that: Point3D, equal: DeepEqualsHelper) {
         return this === that || (
           super.deepEquals(that, equal) &&
           equal(this.z, that.z)
