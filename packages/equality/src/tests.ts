@@ -76,6 +76,32 @@ describe("equality", function () {
     );
   });
 
+  it("should treat array holes the same as undefined elements", function () {
+    assertEqual(
+      [void 0],
+      Array(1),
+    );
+
+    assertEqual(
+      [void 0],
+      [/*hole*/,],
+    );
+
+    assertNotEqual([void 0], []);
+    assertNotEqual(Array(1), []);
+    assertNotEqual([/*hole*/,], []);
+
+    assertEqual(
+      [1, /*hole*/, 3],
+      [1, void 0, 3],
+    );
+
+    assertEqual(
+      [1, /*hole*/, 3, void 0],
+      [1, void 0, 3, /*hole*/,],
+    );
+  });
+
   it("should work for objects", function () {
     assertEqual({
       a: 1,

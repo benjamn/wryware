@@ -121,10 +121,18 @@ function tryEqualsMethod(checker: DeepChecker, a: any, b: any): boolean {
 }
 
 function checkArrays(checker: DeepChecker, a: any[], b: any[]): boolean {
-  return checker.previouslyCompared(a, b) || (
-    a.length === b.length &&
-    a.every((child, i) => checker.check(child, b[i]))
-  );
+  const aLen = a.length;
+  if (aLen !== b.length) return false;
+
+  if (checker.previouslyCompared(a, b)) return true;
+
+  for (let i = 0; i < aLen; ++i) {
+    if (!checker.check(a[i], b[i])) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function checkObjects(checker: DeepChecker, a: object, b: object): boolean {
