@@ -1,3 +1,19 @@
+import { DeepChecker } from "./checker";
+
+export interface Equatable<T = any> {
+  deepEquals(that: T, helper: DeepChecker["check"]): boolean;
+}
+
+export function isEquatable(checker: DeepChecker, obj: any): obj is Equatable {
+  return (
+    isNonNullObject(obj) &&
+    typeof obj.deepEquals === "function" &&
+    // Verify reflexivity. This should be cheap as long as obj.deepEquals(obj)
+    // checks obj === obj first.
+    obj.deepEquals(obj, checker.boundCheck)
+  );
+}
+
 export const fnToStr = Function.prototype.toString;
 
 export const {

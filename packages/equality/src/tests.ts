@@ -1,7 +1,6 @@
 import assert from "assert";
-import { Equatable } from "./checker";
 import defaultEqual, { equal } from "./equality";
-import { objToStr } from "./helpers";
+import { Equatable, objToStr } from "./helpers";
 
 function toStr(value: any) {
   try {

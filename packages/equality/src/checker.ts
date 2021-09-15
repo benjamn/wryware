@@ -2,15 +2,12 @@ import {
   definedKeys,
   fnToStr,
   hasOwn,
+  isEquatable,
   isNativeCode,
   isNonNullObject,
   isPlainObject,
   objToStr,
 } from "./helpers";
-
-export interface Equatable<T = any> {
-  deepEquals(that: T, helper: DeepChecker["check"]): boolean;
-}
 
 type Checker<T> = (
   checker: DeepChecker,
@@ -106,16 +103,6 @@ export class DeepChecker {
     bSet.add(b);
     return false;
   }
-}
-
-function isEquatable(checker: DeepChecker, obj: any): obj is Equatable {
-  return (
-    isNonNullObject(obj) &&
-    typeof obj.deepEquals === "function" &&
-    // Verify reflexivity. This should be cheap as long as obj.deepEquals(obj)
-    // checks obj === obj first.
-    obj.deepEquals(obj, checker.boundCheck)
-  );
 }
 
 function tryEqualsMethod(checker: DeepChecker, a: any, b: any): boolean {
