@@ -128,12 +128,12 @@ function checkArrays(checker: DeepChecker, a: any[], b: any[]): boolean {
 }
 
 function checkObjects(checker: DeepChecker, a: object, b: object): boolean {
+  if (checker.previouslyCompared(a, b)) return true;
+
   if (!isPlainObject(a) ||
       !isPlainObject(b)) {
     return tryEqualsMethod(checker, a, b);
   }
-
-  if (checker.previouslyCompared(a, b)) return true;
 
   const aKeys = definedKeys(a);
   const bKeys = definedKeys(b);

@@ -242,6 +242,53 @@ describe("equality", function () {
     assert.strictEqual(x1y2z3.deepEquals(x1y2 as Point3D, equal), false);
   });
 
+  it("can check cyclic structures of objects with deepEquals methods", function () {
+    class Node<T> implements Equatable<Node<T>> {
+      constructor(
+        public value: T,
+        public next?: Node<T>,
+      ) {}
+
+      static cycle(n: number) {
+        const head = new Node(n);
+        let node = head;
+        while (--n >= 0) {
+          node = new Node(n, node);
+        }
+        return head.next = node;
+      }
+
+      deepEquals(that: Node<T>, equal: DeepEqualsHelper) {
+        return this === that || (
+          equal(this.value, that.value) &&
+          equal(this.next, that.next)
+        );
+      }
+    }
+
+    const cycles = [
+      Node.cycle(0),
+      Node.cycle(1),
+      Node.cycle(2),
+      Node.cycle(3),
+      Node.cycle(4),
+    ];
+
+    cycles.forEach((cycleToCheck, i) => {
+      const sameSizeCycle = Node.cycle(i);
+      assert.notStrictEqual(cycleToCheck, sameSizeCycle);
+      assertEqual(cycleToCheck, sameSizeCycle);
+
+      cycles.forEach((otherCycle, j) => {
+        if (i === j) {
+          assert.strictEqual(cycleToCheck, otherCycle);
+        } else {
+          assertNotEqual(cycleToCheck, otherCycle);
+        }
+      });
+    });
+  });
+
   it("should work for Error objects", function () {
     assertEqual(new Error("oyez"), new Error("oyez"));
     assertNotEqual(new Error("oyez"), new Error("onoz"));
