@@ -1,3 +1,5 @@
+import { Trie } from "@wry/trie";
+
 import {
   definedKeys,
   fnToStr,
@@ -48,9 +50,11 @@ const CHECKERS_BY_TAG = new Map<string, Checker<any>>()
   .set('[object Function]', checkFunctions);
 
 export class DeepChecker {
-  private comparisons: Map<object, Set<object>> | undefined;
-  public readonly boundCheck: DeepChecker["check"] = (a, b) => this.check(a, b);
+  private comparisons = new Trie<{
+    equal?: boolean;
+  }>(false);
 
+  public readonly boundCheck: DeepChecker["check"] = (a, b) => this.check(a, b);
   public check(a: any, b: any): boolean {
     // If the two values are strictly equal, our job is easy.
     if (a === b) {
@@ -69,39 +73,47 @@ export class DeepChecker {
       return false;
     }
 
-    const checker = CHECKERS_BY_TAG.get(aTag);
-    if (checker) {
-      return checker(this, a, b, aTag);
-    }
+    const bothNonNullObjects =
+      isNonNullObject(a) &&
+      isNonNullObject(b);
 
-    if (isNonNullObject(a) && isNonNullObject(b)) {
-      return tryEqualsMethod(this, a, b);
-    }
+    const found =
+      bothNonNullObjects &&
+      this.comparisons.lookup(a, b);
 
-    // Otherwise the values are not equal.
-    return false;
-  }
-
-  public previouslyCompared(a: any, b: any): boolean {
-    this.comparisons = this.comparisons || new Map;
     // Though cyclic references can make an object graph appear infinite from
     // the perspective of a depth-first traversal, the graph still contains a
-    // finite number of distinct object references. We use the cache to avoid
-    // comparing the same pair of object references more than once, which
-    // guarantees termination (even if we end up comparing every object in one
-    // graph to every object in the other graph, which is extremely unlikely),
-    // while still allowing weird isomorphic structures (like rings with
-    // different lengths) a chance to pass the equality test.
-    let bSet = this.comparisons.get(a);
-    if (bSet) {
-      // Return true here because we can be sure false will be returned
-      // somewhere else if the objects are not equivalent.
-      if (bSet.has(b)) return true;
-    } else {
-      this.comparisons.set(a, bSet = new Set);
+    // finite number of distinct object references. We use this.comparisons as a
+    // cache to avoid comparing the same pair of object references more than
+    // once, which guarantees termination (even if we end up comparing every
+    // object in one graph to every object in the other graph, which is
+    // extremely unlikely), while still allowing weird isomorphic structures
+    // (like rings with different lengths) a chance to pass the equality test.
+    if (found) {
+      if (typeof found.equal === "boolean") {
+        return found.equal;
+      }
+      // Although we don't know the actual answer yet, we are about to find out,
+      // so we can cheat by telling anyone else who asks that a equals b. This
+      // provisional found.equal trick is important to prevent infinite cycle
+      // traversals, but does not affect the final answer, since only one
+      // traversal should be necessary to visit/examine all comparable parts of
+      // the input objects and determine the correct result.
+      found.equal = true;
     }
-    bSet.add(b);
-    return false;
+
+    const checker = CHECKERS_BY_TAG.get(aTag);
+
+    const result: boolean =
+      checker ? checker(this, a, b, aTag) :
+      bothNonNullObjects ? tryEqualsMethod(this, a, b) :
+      false;
+
+    if (found) {
+      found.equal = result;
+    }
+
+    return result;
   }
 }
 
@@ -124,8 +136,6 @@ function checkArrays(checker: DeepChecker, a: any[], b: any[]): boolean {
   const aLen = a.length;
   if (aLen !== b.length) return false;
 
-  if (checker.previouslyCompared(a, b)) return true;
-
   for (let i = 0; i < aLen; ++i) {
     if (!checker.check(a[i], b[i])) {
       return false;
@@ -136,8 +146,6 @@ function checkArrays(checker: DeepChecker, a: any[], b: any[]): boolean {
 }
 
 function checkObjects(checker: DeepChecker, a: object, b: object): boolean {
-  if (checker.previouslyCompared(a, b)) return true;
-
   if (!isPlainObject(a) ||
       !isPlainObject(b)) {
     return tryEqualsMethod(checker, a, b);
@@ -194,7 +202,6 @@ function checkMapsOrSets<T extends Map<any, any> | Set<any>>(
   tag: string,
 ): boolean {
   if (a.size !== b.size) return false;
-  if (checker.previouslyCompared(a, b)) return true;
 
   const aIterator = a.entries();
   const isMap = tag === '[object Map]';
