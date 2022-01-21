@@ -1,5 +1,11 @@
 import assert from "assert";
 import defaultEqual, { equal } from "./equality";
+import {
+  Equatable,
+  DeepEqualsHelper,
+  deepEquals,
+  objToStr,
+} from "./helpers";
 
 function toStr(value: any) {
   try {
@@ -10,7 +16,7 @@ function toStr(value: any) {
 }
 
 function assertEqual(a: any, b: any) {
-  assert.strictEqual(equal(a, b), true, `unexpectedly not equal(${toStr(a)}}, ${toStr(b)})`);
+  assert.strictEqual(equal(a, b), true, `unexpectedly not equal(${toStr(a)}, ${toStr(b)})`);
   assert.strictEqual(equal(b, a), true, `unexpectedly not equal(${toStr(b)}, ${toStr(a)})`);
 }
 
@@ -75,6 +81,32 @@ describe("equality", function () {
     );
   });
 
+  it("should treat array holes the same as undefined elements", function () {
+    assertEqual(
+      [void 0],
+      Array(1),
+    );
+
+    assertEqual(
+      [void 0],
+      [/*hole*/,],
+    );
+
+    assertNotEqual([void 0], []);
+    assertNotEqual(Array(1), []);
+    assertNotEqual([/*hole*/,], []);
+
+    assertEqual(
+      [1, /*hole*/, 3],
+      [1, void 0, 3],
+    );
+
+    assertEqual(
+      [1, /*hole*/, 3, void 0],
+      [1, void 0, 3, /*hole*/,],
+    );
+  });
+
   it("should work for objects", function () {
     assertEqual({
       a: 1,
@@ -118,6 +150,174 @@ describe("equality", function () {
       b: void 0,
       c: void 0,
     }, {});
+  });
+
+  it("should not equate !== objects with custom prototypes", function () {
+    class Custom {
+      constructor(public readonly number: number) {}
+    }
+
+    const c1 = new Custom(1234);
+    const c2 = new Custom(1234);
+    const c3 = new Custom(2345);
+
+    assertEqual(Object.keys(c1), ["number"]);
+    assertEqual(Object.keys(c2), ["number"]);
+    assertEqual(Object.keys(c3), ["number"]);
+
+    assert.strictEqual(objToStr.call(c1), "[object Object]");
+    assert.strictEqual(objToStr.call(c2), "[object Object]");
+    assert.strictEqual(objToStr.call(c3), "[object Object]");
+
+    assertEqual(c1, c1);
+    assertEqual(c2, c2);
+    assertEqual(c3, c3);
+    assertNotEqual(c1, c2);
+    assertNotEqual(c1, c3);
+    assertNotEqual(c2, c3);
+  });
+
+  it("should respect custom a[deepEquals](b) methods for unknown Symbol.toStringTag", function () {
+    class Tagged {
+      [Symbol.toStringTag] = "Tagged";
+
+      constructor(private value: any) {}
+
+      [deepEquals](that: Tagged) {
+        return this.value === that.value;
+      }
+    }
+
+    const t1a = new Tagged(1);
+    const t1b = new Tagged(1);
+    const t2a = new Tagged(2);
+    const t2b = new Tagged(2);
+
+    assert.strictEqual(objToStr.call(t1a), "[object Tagged]");
+    assert.strictEqual(objToStr.call(t2b), "[object Tagged]");
+
+    assertEqual(t1a, t1b);
+    assertEqual(t2a, t2b);
+
+    assertNotEqual(t1a, t2a);
+    assertNotEqual(t1a, t2b);
+    assertNotEqual(t1b, t2a);
+    assertNotEqual(t1b, t2b);
+  });
+
+  it("should respect asymmetric a[deepEquals](b) methods", function () {
+    class Point2D implements Equatable {
+      constructor(
+        public readonly x: number,
+        public readonly y: number,
+      ) {}
+
+      // It's a shame that we have to provide the parameter types explicitly.
+      [deepEquals](that: Point2D, equal: DeepEqualsHelper) {
+        return this === that || (
+          equal(this.x, that.x) &&
+          equal(this.y, that.y)
+        );
+      }
+    }
+
+    class Point3D extends Point2D implements Equatable<Point3D> {
+      constructor(
+        x: number,
+        y: number,
+        public readonly z: number,
+      ) {
+        super(x, y);
+      }
+
+      [deepEquals](that: Point3D, equal: DeepEqualsHelper) {
+        return this === that || (
+          super[deepEquals](that, equal) &&
+          equal(this.z, that.z)
+        );
+      }
+    }
+
+    const x1y2 = new Point2D(1, 2);
+    const x2y1 = new Point2D(2, 1);
+    const x1y2z0 = new Point3D(1, 2, 0);
+    const x1y2z3 = new Point3D(1, 2, 3);
+
+    assertEqual(x1y2, x1y2);
+    assertEqual(x2y1, x2y1);
+    assertEqual(x1y2z0, x1y2z0);
+    assertEqual(x1y2z3, x1y2z3);
+
+    assert.strictEqual(x1y2[deepEquals](x1y2, equal), true);
+    assert.strictEqual(x2y1[deepEquals](x2y1, equal), true);
+    assert.strictEqual(x1y2z0[deepEquals](x1y2z0, equal), true);
+    assert.strictEqual(x1y2z3[deepEquals](x1y2z3, equal), true);
+
+    assertEqual(x1y2, new Point2D(1, 2));
+    assertEqual(x2y1, new Point2D(2, 1));
+    assertEqual(x1y2z0, new Point3D(1, 2, 0));
+    assertEqual(x1y2z3, new Point3D(1, 2, 3));
+
+    assertNotEqual(x1y2, x2y1);
+    assertNotEqual(x1y2, x1y2z3);
+    assertNotEqual(x2y1, x1y2z0);
+    assertNotEqual(x2y1, x1y2z3);
+    assertNotEqual(x1y2z0, x1y2z3);
+
+    // These are the most interesting cases, because x1y2 thinks it's equal to
+    // both x1y2z0 and x1y2z3, but the equal(a, b) function enforces symmetry.
+    assertNotEqual(x1y2, x1y2z0);
+    assert.strictEqual(x1y2[deepEquals](x1y2z0, equal), true);
+    assert.strictEqual(x1y2[deepEquals](x1y2z3, equal), true);
+    assert.strictEqual(x1y2z0[deepEquals](x1y2 as Point3D, equal), false);
+    assert.strictEqual(x1y2z3[deepEquals](x1y2 as Point3D, equal), false);
+  });
+
+  it("can check cyclic structures of objects with deepEquals methods", function () {
+    class Node<T> implements Equatable<Node<T>> {
+      constructor(
+        public value: T,
+        public next?: Node<T>,
+      ) {}
+
+      static cycle(n: number) {
+        const head = new Node(n);
+        let node = head;
+        while (--n >= 0) {
+          node = new Node(n, node);
+        }
+        return head.next = node;
+      }
+
+      [deepEquals](that: Node<T>, equal: DeepEqualsHelper) {
+        return this === that || (
+          equal(this.value, that.value) &&
+          equal(this.next, that.next)
+        );
+      }
+    }
+
+    const cycles = [
+      Node.cycle(0),
+      Node.cycle(1),
+      Node.cycle(2),
+      Node.cycle(3),
+      Node.cycle(4),
+    ];
+
+    cycles.forEach((cycleToCheck, i) => {
+      const sameSizeCycle = Node.cycle(i);
+      assert.notStrictEqual(cycleToCheck, sameSizeCycle);
+      assertEqual(cycleToCheck, sameSizeCycle);
+
+      cycles.forEach((otherCycle, j) => {
+        if (i === j) {
+          assert.strictEqual(cycleToCheck, otherCycle);
+        } else {
+          assertNotEqual(cycleToCheck, otherCycle);
+        }
+      });
+    });
   });
 
   it("should work for Error objects", function () {
