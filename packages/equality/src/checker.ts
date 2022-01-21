@@ -51,19 +51,59 @@ const CHECKERS_BY_TAG = new Map<string, Checker<any>>()
   .set('[object AsyncGeneratorFunction]', checkFunctions)
   .set('[object Function]', checkFunctions);
 
-function getBoundCheck(checker: DeepChecker): DeepEqualsHelper {
-  return checker["boundCheck"] || (checker["boundCheck"] = function (a, b) {
-    return checker.check(a, b);
-  });
+type ComparisonTrie = Trie<{
+  equal?: boolean;
+}>;
+
+// Initializing checker.comparisons and checker.boundCheck as proper members of
+// the DeepChecker class makes creating DeepChecker objects considerably more
+// expensive in some environments, even if we initialize them to null and then
+// upgrade them lazily, when needed. Instead, we store these two items of state
+// in a separate Map, which gets cleaned up in the DeepChecker#release method.
+const privateStateMap = new Map<DeepChecker, {
+  comparisons?: ComparisonTrie;
+  boundCheck?: DeepEqualsHelper;
+}>();
+
+function getPrivateState(checker: DeepChecker) {
+  let state = privateStateMap.get(checker)!;
+  if (!state) privateStateMap.set(checker, state = Object.create(null));
+  return state;
 }
 
-export class DeepChecker {
-  // Initialized lazily because not always needed.
-  private comparisons: null | Trie<{ equal?: boolean; }> = null;
+function getComparisons(checker: DeepChecker): ComparisonTrie {
+  const state = getPrivateState(checker);
+  return state.comparisons || (state.comparisons = new Trie(false));
+}
 
-  // Initialized lazily because needed only when custom deepEqualsMethod methods
-  // are in use.
-  private boundCheck: null | DeepEqualsHelper = null;
+function getBoundCheck(checker: DeepChecker): DeepEqualsHelper {
+  const state = getPrivateState(checker);
+  return state.boundCheck || (
+    state.boundCheck = (a, b) => checker.check(a, b)
+  );
+}
+
+const checkerPool: DeepChecker[] = [];
+const CHECKER_POOL_TARGET_SIZE = 5;
+
+export class DeepChecker {
+  // Use DeepChecker.acquire() instead of new DeepChecker.
+  protected constructor() {}
+
+  static acquire() {
+    return checkerPool.pop() || new DeepChecker();
+  }
+
+  public release() {
+    // If privateStateMap was a WeakMap, we wouldn't necessarily need to perform
+    // this cleanup, but not all environments have a (performant) implementation
+    // of WeakMap, and the cleanup is easy enough:
+    privateStateMap.delete(this);
+
+    if (checkerPool.length < CHECKER_POOL_TARGET_SIZE) {
+      checkerPool.push(this);
+    }
+  }
 
   public check(a: any, b: any): boolean {
     // If the two values are strictly equal, our job is easy.
@@ -89,9 +129,7 @@ export class DeepChecker {
 
     const found =
       bothNonNullObjects &&
-      (this.comparisons || (
-        this.comparisons = new Trie(false)
-      )).lookup(a, b);
+      getComparisons(this).lookup(a, b);
 
     // Though cyclic references can make an object graph appear infinite from
     // the perspective of a depth-first traversal, the graph still contains a
