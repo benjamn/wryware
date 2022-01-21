@@ -9,6 +9,7 @@ import {
   isNonNullObject,
   isPlainObject,
   objToStr,
+  deepEqualsMethod,
 } from "./helpers";
 
 type Checker<T> = (
@@ -121,14 +122,15 @@ function tryEqualsMethod(checker: DeepChecker, a: any, b: any): boolean {
   return (
     isEquatable(checker, a) &&
     isEquatable(checker, b) &&
-    a.deepEquals(b, checker.boundCheck) &&
-    // Verify symmetry. If a.deepEquals is not exactly the same function as
-    // b.deepEquals, b.deepEquals(a) can legitimately disagree with
-    // a.deepEquals(b), so we must check both. When a.deepEquals ===
-    // b.deepEquals, the additional check should be redundant, unless that
-    // .deepEquals method is somehow asymmetric.
-    (a.deepEquals === b.deepEquals ||
-     b.deepEquals(a, checker.boundCheck))
+    a[deepEqualsMethod](b, checker.boundCheck) &&
+    // Verify symmetry. If a[deepEqualsMethod] is not exactly the same function
+    // as b[deepEqualsMethod], b[deepEqualsMethod](a) can legitimately disagree
+    // with a[deepEqualsMethod](b), so we must check both. However, in the
+    // common case where a[deepEqualsMethod] === b[deepEqualsMethod], the
+    // additional check should be redundant, unless that method is itself
+    // somehow non-commutative/asymmetric.
+    (a[deepEqualsMethod] === b[deepEqualsMethod] ||
+     b[deepEqualsMethod](a, checker.boundCheck))
   );
 }
 
