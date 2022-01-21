@@ -1,5 +1,11 @@
 import { DeepChecker } from "./checker";
 
+export {
+  Equatable,
+  isEquatable,
+  deepEquals,
+} from "./helpers";
+
 /**
  * Performs a deep equality check on two JavaScript values, tolerating cycles.
  */

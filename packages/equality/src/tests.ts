@@ -3,7 +3,7 @@ import defaultEqual, { equal } from "./equality";
 import {
   Equatable,
   DeepEqualsHelper,
-  deepEqualsMethod,
+  deepEquals,
   objToStr,
 } from "./helpers";
 
@@ -177,13 +177,13 @@ describe("equality", function () {
     assertNotEqual(c2, c3);
   });
 
-  it("should respect custom a[deepEqualsMethod](b) methods for unknown Symbol.toStringTag", function () {
+  it("should respect custom a[deepEquals](b) methods for unknown Symbol.toStringTag", function () {
     class Tagged {
       [Symbol.toStringTag] = "Tagged";
 
       constructor(private value: any) {}
 
-      [deepEqualsMethod](that: Tagged) {
+      [deepEquals](that: Tagged) {
         return this.value === that.value;
       }
     }
@@ -205,7 +205,7 @@ describe("equality", function () {
     assertNotEqual(t1b, t2b);
   });
 
-  it("should respect asymmetric a[deepEqualsMethod](b) methods", function () {
+  it("should respect asymmetric a[deepEquals](b) methods", function () {
     class Point2D implements Equatable {
       constructor(
         public readonly x: number,
@@ -213,7 +213,7 @@ describe("equality", function () {
       ) {}
 
       // It's a shame that we have to provide the parameter types explicitly.
-      [deepEqualsMethod](that: Point2D, equal: DeepEqualsHelper) {
+      [deepEquals](that: Point2D, equal: DeepEqualsHelper) {
         return this === that || (
           equal(this.x, that.x) &&
           equal(this.y, that.y)
@@ -230,9 +230,9 @@ describe("equality", function () {
         super(x, y);
       }
 
-      [deepEqualsMethod](that: Point3D, equal: DeepEqualsHelper) {
+      [deepEquals](that: Point3D, equal: DeepEqualsHelper) {
         return this === that || (
-          super[deepEqualsMethod](that, equal) &&
+          super[deepEquals](that, equal) &&
           equal(this.z, that.z)
         );
       }
@@ -248,10 +248,10 @@ describe("equality", function () {
     assertEqual(x1y2z0, x1y2z0);
     assertEqual(x1y2z3, x1y2z3);
 
-    assert.strictEqual(x1y2[deepEqualsMethod](x1y2, equal), true);
-    assert.strictEqual(x2y1[deepEqualsMethod](x2y1, equal), true);
-    assert.strictEqual(x1y2z0[deepEqualsMethod](x1y2z0, equal), true);
-    assert.strictEqual(x1y2z3[deepEqualsMethod](x1y2z3, equal), true);
+    assert.strictEqual(x1y2[deepEquals](x1y2, equal), true);
+    assert.strictEqual(x2y1[deepEquals](x2y1, equal), true);
+    assert.strictEqual(x1y2z0[deepEquals](x1y2z0, equal), true);
+    assert.strictEqual(x1y2z3[deepEquals](x1y2z3, equal), true);
 
     assertEqual(x1y2, new Point2D(1, 2));
     assertEqual(x2y1, new Point2D(2, 1));
@@ -267,10 +267,10 @@ describe("equality", function () {
     // These are the most interesting cases, because x1y2 thinks it's equal to
     // both x1y2z0 and x1y2z3, but the equal(a, b) function enforces symmetry.
     assertNotEqual(x1y2, x1y2z0);
-    assert.strictEqual(x1y2[deepEqualsMethod](x1y2z0, equal), true);
-    assert.strictEqual(x1y2[deepEqualsMethod](x1y2z3, equal), true);
-    assert.strictEqual(x1y2z0[deepEqualsMethod](x1y2 as Point3D, equal), false);
-    assert.strictEqual(x1y2z3[deepEqualsMethod](x1y2 as Point3D, equal), false);
+    assert.strictEqual(x1y2[deepEquals](x1y2z0, equal), true);
+    assert.strictEqual(x1y2[deepEquals](x1y2z3, equal), true);
+    assert.strictEqual(x1y2z0[deepEquals](x1y2 as Point3D, equal), false);
+    assert.strictEqual(x1y2z3[deepEquals](x1y2 as Point3D, equal), false);
   });
 
   it("can check cyclic structures of objects with deepEquals methods", function () {
@@ -289,7 +289,7 @@ describe("equality", function () {
         return head.next = node;
       }
 
-      [deepEqualsMethod](that: Node<T>, equal: DeepEqualsHelper) {
+      [deepEquals](that: Node<T>, equal: DeepEqualsHelper) {
         return this === that || (
           equal(this.value, that.value) &&
           equal(this.next, that.next)

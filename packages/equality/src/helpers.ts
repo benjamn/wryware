@@ -2,19 +2,19 @@ import { DeepChecker } from "./checker";
 
 export type DeepEqualsHelper = DeepChecker["check"];
 
-export const deepEqualsMethod =
+export const deepEquals =
   Symbol.for("@wry/equality:deepEquals");
 
 export interface Equatable<T = any> {
-  [deepEqualsMethod](that: T, helper: DeepChecker["check"]): boolean;
+  [deepEquals](that: T, helper: DeepChecker["check"]): boolean;
 }
 
-export function isEquatable(checker: DeepChecker, obj: any): obj is Equatable {
+export function isEquatable(obj: any): obj is Equatable {
   return (
     isNonNullObject(obj) &&
     // Using `in` instead of `hasOwn` because the method could be inherited from
     // the prototype chain.
-    deepEqualsMethod in obj
+    deepEquals in obj
   );
 }
 
