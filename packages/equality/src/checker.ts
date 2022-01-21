@@ -10,6 +10,7 @@ import {
   isPlainObject,
   objToStr,
   deepEqualsMethod,
+  DeepEqualsHelper,
 } from "./helpers";
 
 type Checker<T> = (
@@ -50,12 +51,20 @@ const CHECKERS_BY_TAG = new Map<string, Checker<any>>()
   .set('[object AsyncGeneratorFunction]', checkFunctions)
   .set('[object Function]', checkFunctions);
 
-export class DeepChecker {
-  private comparisons = new Trie<{
-    equal?: boolean;
-  }>(false);
+function getBoundCheck(checker: DeepChecker): DeepEqualsHelper {
+  return checker["boundCheck"] || (checker["boundCheck"] = function (a, b) {
+    return checker.check(a, b);
+  });
+}
 
-  public readonly boundCheck: DeepChecker["check"] = (a, b) => this.check(a, b);
+export class DeepChecker {
+  // Initialized lazily because not always needed.
+  private comparisons: null | Trie<{ equal?: boolean; }> = null;
+
+  // Initialized lazily because needed only when custom deepEqualsMethod methods
+  // are in use.
+  private boundCheck: null | DeepEqualsHelper = null;
+
   public check(a: any, b: any): boolean {
     // If the two values are strictly equal, our job is easy.
     if (a === b) {
@@ -80,7 +89,9 @@ export class DeepChecker {
 
     const found =
       bothNonNullObjects &&
-      this.comparisons.lookup(a, b);
+      (this.comparisons || (
+        this.comparisons = new Trie(false)
+      )).lookup(a, b);
 
     // Though cyclic references can make an object graph appear infinite from
     // the perspective of a depth-first traversal, the graph still contains a
@@ -122,7 +133,7 @@ function tryEqualsMethod(checker: DeepChecker, a: any, b: any): boolean {
   return (
     isEquatable(checker, a) &&
     isEquatable(checker, b) &&
-    a[deepEqualsMethod](b, checker.boundCheck) &&
+    a[deepEqualsMethod](b, getBoundCheck(checker)) &&
     // Verify symmetry. If a[deepEqualsMethod] is not exactly the same function
     // as b[deepEqualsMethod], b[deepEqualsMethod](a) can legitimately disagree
     // with a[deepEqualsMethod](b), so we must check both. However, in the
@@ -130,7 +141,7 @@ function tryEqualsMethod(checker: DeepChecker, a: any, b: any): boolean {
     // additional check should be redundant, unless that method is itself
     // somehow non-commutative/asymmetric.
     (a[deepEqualsMethod] === b[deepEqualsMethod] ||
-     b[deepEqualsMethod](a, checker.boundCheck))
+     b[deepEqualsMethod](a, getBoundCheck(checker)))
   );
 }
 
