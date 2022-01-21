@@ -40,16 +40,18 @@ export function isPlainObject(obj: any): obj is Record<string, any> {
   return false;
 }
 
-export function definedKeys<TObject extends object>(obj: TObject) {
-  // Remember that the second argument to Array.prototype.filter will be
-  // used as `this` within the callback function.
-  return Object.keys(obj).filter(isDefinedKey, obj);
-}
-function isDefinedKey<TObject extends object>(
-  this: TObject,
-  key: keyof TObject,
-) {
-  return this[key] !== void 0;
+export function definedKeys<TObject extends Record<string, any>>(obj: TObject) {
+  const keys = Object.keys(obj);
+  const { length } = keys;
+  let definedCount = 0;
+  for (let k = 0; k < length; ++k) {
+    const key = keys[k];
+    if (obj[key] !== void 0) {
+      keys[definedCount++] = key;
+    }
+  }
+  keys.length = definedCount;
+  return keys;
 }
 
 const nativeCodeSuffix = "{ [native code] }";
