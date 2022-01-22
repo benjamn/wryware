@@ -1,0 +1,36 @@
+{
+  "name": "@wry/supertext",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Ben Newman <ben@eloper.dev>",
+  "description": "Generalized replacement for @wry/context",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "keywords": [],
+  "homepage": "https://github.com/benjamn/wryware",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benjamn/wryware.git"
+  },
+  "bugs": {
+    "url": "https://github.com/benjamn/wryware/issues"
+  },
+  "scripts": {
+    "clean": "../../node_modules/.bin/rimraf lib",
+    "tsc": "../../node_modules/.bin/tsc",
+    "rollup": "../../node_modules/.bin/rollup -c",
+    "build": "npm run clean && npm run tsc && npm run rollup",
+    "mocha": "../../scripts/test.sh lib/tests.js",
+    "prepare": "npm run build",
+    "test": "npm run build && npm run mocha"
+  },
+  "dependencies": {
+    "@wry/trie": "^0.3.2",
+    "tslib": "^2.3.0"
+  },
+  "engines": {
+    "node": ">=8"
+  }
+}
