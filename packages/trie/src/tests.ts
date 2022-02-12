@@ -87,4 +87,75 @@ describe("Trie", function () {
     // Verify that all Data objects are distinct.
     assert.strictEqual(new Set(datas).size, datas.length);
   });
+
+  describe("performance", () => {
+    const objectKeys: object[][] = [];
+    for (let k = 0; k < 2e4; ++k) {
+      const key: object[] = [];
+      for (let i = 0; i < 100; ++i) {
+        key.push({});
+      }
+      objectKeys.push(key);
+    }
+
+    const numberKeys: number[][] = [];
+    for (let k = 0; k < 2e4; ++k) {
+      const key: number[] = [];
+      for (let i = 0; i < 100; ++i) {
+        key.push(i * k);
+      }
+      numberKeys.push(key);
+    }
+
+    const nodeMajorVersion = parseInt(process.versions.node.split('.')[0], 10);
+
+    (nodeMajorVersion > 10 ? it : it.skip)
+    ("lots of fresh object references added weakly", function () {
+      this.timeout(20000);
+      const trie = new Trie<object>(true);
+      objectKeys.forEach(key => {
+        trie.lookupArray(key);
+      });
+    });
+
+    it("lots of fresh object references added strongly", function () {
+      this.timeout(20000);
+      const trie = new Trie<object>(false);
+      objectKeys.forEach(key => {
+        trie.lookupArray(key);
+      });
+    });
+
+    it("lots of numeric key arrays added weakly", function () {
+      this.timeout(20000);
+      const trie = new Trie<object>(true);
+      numberKeys.forEach(key => {
+        trie.lookupArray(key);
+      });
+    });
+
+    it("lots of numeric key arrays added strongly", function () {
+      this.timeout(20000);
+      const trie = new Trie<object>(false);
+      numberKeys.forEach(key => {
+        trie.lookupArray(key);
+      });
+    });
+
+    it("looking up the same key lots of times, weakly", function () {
+      this.timeout(20000);
+      const trie = new Trie<object>(true);
+      objectKeys.forEach(() => {
+        trie.lookupArray(objectKeys[0]);
+      });
+    });
+
+    it("looking up the same key lots of times, strongly", function () {
+      this.timeout(20000);
+      const trie = new Trie<object>(false);
+      objectKeys.forEach(() => {
+        trie.lookupArray(objectKeys[0]);
+      });
+    });
+  });
 });
