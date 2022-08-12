@@ -17,11 +17,14 @@
     "mocha": "9.1.1",
     "rimraf": "3.0.2",
     "rollup": "2.77.3",
-    "rollup-plugin-typescript2": "0.30.0",
+    "rollup-plugin-typescript2": "^0.32.1",
     "source-map-support": "0.5.21",
     "typescript": "4.3.5"
   },
   "engines": {
     "node": ">=8"
+  },
+  "dependencies": {
+    "tslib": "^2.4.0"
   }
 }
