@@ -465,8 +465,8 @@ describe("asyncFromGen", function () {
       try {
         yield Promise.reject(new Error("expected"));
         throw new Error("not reached");
-      } catch (error) {
-        assert.strictEqual(error.message, "expected");
+      } catch (error: any) {
+        assert.strictEqual(error?.message, "expected");
       }
       return "ok";
     });
