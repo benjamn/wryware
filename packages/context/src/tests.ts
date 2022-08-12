@@ -87,8 +87,13 @@ describe("Slot", function () {
     assert.ok(new Slot<number>() instanceof cjsSlotModule.Slot);
     assert.ok(new cjsSlotModule.Slot() instanceof Slot);
     assert.strictEqual(cjsSlotModule.Slot, Slot);
-    assert.strictEqual((Array as any)["@wry/context:Slot"], Slot);
+    const globalKey = "@wry/context:Slot";
+    assert.strictEqual((global as any)[globalKey], Slot);
     assert.deepEqual(Object.keys(Array), []);
+    assert.strictEqual(
+      Object.keys(global).indexOf(globalKey),
+      -1,
+    );
   });
 
   it("can be subclassed", function () {

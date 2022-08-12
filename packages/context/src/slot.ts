@@ -123,27 +123,61 @@ const makeSlotClass = () => class Slot<TValue> {
   }
 };
 
-// We store a single global implementation of the Slot class as a permanent
-// non-enumerable symbol property of the Array constructor. This obfuscation
-// does nothing to prevent access to the Slot class, but at least it ensures
-// the implementation (i.e. currentContext) cannot be tampered with, and all
-// copies of the @wry/context package (hopefully just one) will share the
-// same Slot implementation. Since the first copy of the @wry/context package
-// to be imported wins, this technique imposes a very high cost for any
-// future breaking changes to the Slot class.
-const globalKey = "@wry/context:Slot";
-const host = Array as any;
-
-export const Slot: ReturnType<typeof makeSlotClass> = host[globalKey] || function () {
-  const Slot = makeSlotClass();
+function maybe<T>(fn: () => T): T | undefined {
   try {
-    Object.defineProperty(host, globalKey, {
-      value: host[globalKey] = Slot,
-      enumerable: false,
-      writable: false,
-      configurable: false,
-    });
-  } finally {
-    return Slot;
-  }
-}();
+    return fn();
+  } catch (ignored) {}
+}
+
+// We store a single global implementation of the Slot class as a permanent
+// non-enumerable property of the globalThis object. This obfuscation does
+// nothing to prevent access to the Slot class, but at least it ensures the
+// implementation (i.e. currentContext) cannot be tampered with, and all copies
+// of the @wry/context package (hopefully just one) will share the same Slot
+// implementation. Since the first copy of the @wry/context package to be
+// imported wins, this technique imposes a steep cost for any future breaking
+// changes to the Slot class.
+const globalKey = "@wry/context:Slot";
+
+const host =
+  // Prefer globalThis when available.
+  // https://github.com/benjamn/wryware/issues/347
+  maybe(() => globalThis) ||
+  // Fall back to global, which works in Node.js and may be converted by some
+  // bundlers to the appropriate identifier (window, self, ...) depending on the
+  // bundling target. https://github.com/endojs/endo/issues/576#issuecomment-1178515224
+  maybe(() => global) ||
+  // Otherwise, use a dummy host that's local to this module. We used to fall
+  // back to using the Array constructor as a namespace, but that was flagged in
+  // https://github.com/benjamn/wryware/issues/347, and can be avoided.
+  Object.create(null) as typeof Array;
+
+// Whichever globalHost we're using, make TypeScript happy about the additional
+// globalKey property.
+const globalHost: typeof host & {
+  [globalKey]?: typeof Slot;
+} = host;
+
+export const Slot: ReturnType<typeof makeSlotClass> =
+  globalHost[globalKey] ||
+  // Earlier versions of this package stored the globalKey property on the Array
+  // constructor, so we check there as well, to prevent Slot class duplication.
+  (Array as typeof globalHost)[globalKey] ||
+  (function (Slot) {
+    try {
+      Object.defineProperty(globalHost, globalKey, {
+        value: Slot,
+        enumerable: false,
+        writable: false,
+        // When it was possible for globalHost to be the Array constructor (a
+        // legacy Slot dedup strategy), it was important for the property to be
+        // configurable:true so it could be deleted. That does not seem to be as
+        // important when globalHost is the global object, but I don't want to
+        // cause similar problems again, and configurable:true seems safest.
+        // https://github.com/endojs/endo/issues/576#issuecomment-1178274008
+        configurable: true
+      });
+    } finally {
+      return Slot;
+    }
+  })(makeSlotClass());
