@@ -124,26 +124,43 @@ const makeSlotClass = () => class Slot<TValue> {
 };
 
 // We store a single global implementation of the Slot class as a permanent
-// non-enumerable symbol property of the Array constructor. This obfuscation
-// does nothing to prevent access to the Slot class, but at least it ensures
-// the implementation (i.e. currentContext) cannot be tampered with, and all
-// copies of the @wry/context package (hopefully just one) will share the
-// same Slot implementation. Since the first copy of the @wry/context package
-// to be imported wins, this technique imposes a very high cost for any
-// future breaking changes to the Slot class.
+// non-enumerable property of the globalThis object. This obfuscation does
+// nothing to prevent access to the Slot class, but at least it ensures the
+// implementation (i.e. currentContext) cannot be tampered with, and all copies
+// of the @wry/context package (hopefully just one) will share the same Slot
+// implementation. Since the first copy of the @wry/context package to be
+// imported wins, this technique imposes a steep cost for any future breaking
+// changes to the Slot class.
 const globalKey = "@wry/context:Slot";
-const host = Array as any;
 
-export const Slot: ReturnType<typeof makeSlotClass> = host[globalKey] || function () {
-  const Slot = makeSlotClass();
-  try {
-    Object.defineProperty(host, globalKey, {
-      value: host[globalKey] = Slot,
-      enumerable: false,
-      writable: false,
-      configurable: false,
-    });
-  } finally {
-    return Slot;
-  }
-}();
+// When globalThis is available, use it instead of the Array constructor.
+// https://github.com/benjamn/wryware/issues/347
+const host = typeof globalThis === "object" ? globalThis : Array;
+
+// Whichever global host we're using (globalThis or Array), make TypeScript
+// happy about the additional globalKey property.
+const globalHost: typeof host & {
+  [globalKey]?: typeof Slot;
+} = host;
+
+export const Slot: ReturnType<typeof makeSlotClass> =
+  globalHost[globalKey] ||
+  // Earlier versions of this package stored the globalKey property on the Array
+  // constructor, so we check there as well, to prevent Slot class duplication.
+  (Array as typeof globalHost)[globalKey] ||
+  (function () {
+    const Slot = makeSlotClass();
+    try {
+      Object.defineProperty(globalHost, globalKey, {
+        value: globalHost[globalKey] = Slot,
+        enumerable: false,
+        writable: false,
+        // If the globalHost is the Array constructor (a legacy backup), it's
+        // important for the property to be configurable so it can be deleted.
+        // https://github.com/benjamn/wryware/issues/347
+        configurable: globalHost === Array,
+      });
+    } finally {
+      return Slot;
+    }
+  })();
