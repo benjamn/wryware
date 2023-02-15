@@ -377,6 +377,38 @@ describe("equality", function () {
     assertNotEqual(foo, bar)
   });
 
+  it('should work with proxies mixed into the objects', function() {
+    const foo = {
+      name: 'foo',
+      objectThing: {
+        property: 'stuff',
+        array: [
+          'apples',
+          'oranges',
+          'grapes'
+        ]
+      },
+    };
+
+    const bar = {
+      name: 'foo',
+      objectThing: new Proxy({
+        property: 'stuff',
+        array: [
+          'apples',
+          'oranges',
+          'grapes'
+        ]
+      }, {
+        get(target, prop, receiver) {
+          return prop in target ? target[prop as keyof typeof target] : 'bad_prop';
+        },
+      })
+    };
+
+    assertEqual(foo, bar);
+  });
+
   describe("performance", function () {
     const limit = 1e6;
     this.timeout(20000);
