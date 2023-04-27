@@ -32,6 +32,16 @@ export class Trie<Data> {
     return node.data || (node.data = this.makeData(slice.call(array)));
   }
 
+  public peek<T extends any[]>(...array: T): Data | undefined {
+    return this.peekArray(array);
+  }
+
+  public peekArray<T extends IArguments | any[]>(array: T): Data | undefined {
+    let node: Trie<Data> | undefined = this;
+    forEach.call(array, (key) => (node = node && node.peekChildTrie(key)));
+    return node && node.data;
+  }
+
   private getChildTrie(key: any) {
     const map = this.weakness && isObjRef(key)
       ? this.weak || (this.weak = new WeakMap<any, Trie<Data>>())
@@ -39,6 +49,12 @@ export class Trie<Data> {
     let child = map.get(key);
     if (!child) map.set(key, child = new Trie<Data>(this.weakness, this.makeData));
     return child;
+  }
+
+  private peekChildTrie(key: any) {
+    const map = this.weakness && isObjRef(key) ? this.weak : this.strong;
+
+    return map && map.get(key);
   }
 }
 

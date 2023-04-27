@@ -87,4 +87,26 @@ describe("Trie", function () {
     // Verify that all Data objects are distinct.
     assert.strictEqual(new Set(datas).size, datas.length);
   });
+
+  it("can peek at values", function () {
+    const trie = new Trie(true, (args) => args);
+
+    const obj = {};
+    assert.strictEqual(trie.peek(1, 2, 'x'), undefined);
+    assert.strictEqual(trie.peek(1, 2, obj), undefined);
+    assert.strictEqual(trie.peekArray([1, 2, 'x']), undefined);
+    assert.strictEqual(trie.peekArray([1, 2, obj]), undefined);
+    // peek/peekArray should not create anything on its own
+    assert.strictEqual(trie['weak'], undefined);
+    assert.strictEqual(trie['strong'], undefined);
+    assert.strictEqual(trie['data'], undefined);
+
+    const data1 = trie.lookup(1, 2, 'x');
+    const data2 = trie.lookup(1, 2, obj);
+
+    assert.strictEqual(trie.peek(1, 2, 'x'), data1);
+    assert.strictEqual(trie.peek(1, 2, obj), data2);
+    assert.strictEqual(trie.peekArray([1, 2, 'x']), data1);
+    assert.strictEqual(trie.peekArray([1, 2, obj]), data2);
+  });
 });
