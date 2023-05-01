@@ -8,6 +8,7 @@ const defaultMakeData = () => Object.create(null);
 
 // Useful for processing arguments objects as well as arrays.
 const { forEach, slice } = Array.prototype;
+const { hasOwnProperty } = Object.prototype;
 
 export class Trie<Data> {
   // Since a `WeakMap` cannot hold primitive values as keys, we need a
@@ -29,7 +30,26 @@ export class Trie<Data> {
   public lookupArray<T extends IArguments | any[]>(array: T): Data {
     let node: Trie<Data> = this;
     forEach.call(array, key => node = node.getChildTrie(key));
-    return node.data || (node.data = this.makeData(slice.call(array)));
+    return hasOwnProperty.call(node, "data")
+      ? node.data as Data
+      : node.data = this.makeData(slice.call(array));
+  }
+
+  public peek<T extends any[]>(...array: T): Data | undefined {
+    return this.peekArray(array);
+  }
+
+  public peekArray<T extends IArguments | any[]>(array: T): Data | undefined {
+    let node: Trie<Data> | undefined = this;
+
+    for (let i = 0, len = array.length; node && i < len; ++i) {
+      const map: Trie<Data>["weak" | "strong"] =
+        this.weakness && isObjRef(array[i]) ? node.weak : node.strong;
+
+      node = map && map.get(array[i]);
+    }
+
+    return node && node.data;
   }
 
   private getChildTrie(key: any) {
