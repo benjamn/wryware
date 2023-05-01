@@ -41,7 +41,14 @@ export class Trie<Data> {
 
   public peekArray<T extends IArguments | any[]>(array: T): Data | undefined {
     let node: Trie<Data> | undefined = this;
-    forEach.call(array, (key) => (node = node && node.peekChildTrie(key)));
+
+    for (let i = 0, len = array.length; node && i < len; ++i) {
+      const map: Trie<Data>["weak" | "strong"] =
+        this.weakness && isObjRef(array[i]) ? node.weak : node.strong;
+
+      node = map && map.get(array[i]);
+    }
+
     return node && node.data;
   }
 
@@ -52,12 +59,6 @@ export class Trie<Data> {
     let child = map.get(key);
     if (!child) map.set(key, child = new Trie<Data>(this.weakness, this.makeData));
     return child;
-  }
-
-  private peekChildTrie(key: any) {
-    const map = this.weakness && isObjRef(key) ? this.weak : this.strong;
-
-    return map && map.get(key);
   }
 }
 
