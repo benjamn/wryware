@@ -18,13 +18,10 @@
     "url": "https://github.com/benjamn/wryware/issues"
   },
   "scripts": {
-    "build": "npm run clean:before && npm run tsc && npm run rollup && npm run clean:after",
+    "build": "npm run clean:before && npm run tsc && npm run rollup",
     "clean:before": "../../node_modules/.bin/rimraf lib",
-    "tsc": "npm run tsc:es5 && npm run tsc:esm",
-    "tsc:es5": "../../node_modules/.bin/tsc -p tsconfig.es5.json",
-    "tsc:esm": "../../node_modules/.bin/tsc -p tsconfig.json",
+    "tsc": "../../node_modules/.bin/tsc",
     "rollup": "../../node_modules/.bin/rollup -c",
-    "clean:after": "../../node_modules/.bin/rimraf lib/es5",
     "prepare": "npm run build",
     "test:cjs": "../../scripts/test.sh lib/tests/bundle.cjs",
     "test:esm": "../../scripts/test.sh lib/tests/bundle.js",

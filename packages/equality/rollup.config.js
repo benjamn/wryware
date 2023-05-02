@@ -26,7 +26,7 @@ function build(input, output, format) {
 
 export default [
   build(
-    "lib/es5/index.js",
+    "lib/index.js",
     "lib/bundle.cjs",
     "cjs"
   ),
@@ -36,7 +36,7 @@ export default [
     "esm"
   ),
   build(
-    "lib/es5/tests/main.js",
+    "lib/tests/main.js",
     "lib/tests/bundle.cjs",
     "cjs"
   ),
