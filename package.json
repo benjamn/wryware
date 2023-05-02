@@ -5,16 +5,17 @@
   "description": "A collection of packages that are probably a little too clever",
   "license": "MIT",
   "scripts": {
-    "postinstall": "lerna exec -- npm install",
-    "build": "lerna run build",
-    "prepublish": "npm run build",
-    "test": "npm run build && lerna run test"
+    "prepare": "lerna exec -- npm install --ignore-scripts",
+    "build": "nx run-many --target=build --all --parallel",
+    "test": "nx run-many --target=test --all --parallel"
   },
   "devDependencies": {
+    "@nx/js": "^16.0.2",
     "@types/mocha": "^9.1.1",
     "@types/node": "18.14.6",
     "lerna": "^6.6.1",
     "mocha": "^10.0.0",
+    "nx": "15.8.4",
     "rimraf": "3.0.2",
     "rollup": "2.79.0",
     "rollup-plugin-typescript2": "^0.32.1",
