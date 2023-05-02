@@ -32,7 +32,7 @@
     "test": "npm run build && npm run mocha"
   },
   "dependencies": {
-    "@wry/context": "file:../context",
+    "@wry/context": "*",
     "tslib": "^2.3.0"
   },
   "engines": {
