@@ -1,5 +1,5 @@
-import assert from "assert";
-import { name } from "./template";
+import * as assert from "assert";
+import { name } from "../index";
 
 describe("template", function () {
   it("should be importable", function () {
