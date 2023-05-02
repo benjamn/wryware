@@ -1,4 +1,5 @@
-node_modules
-src
-lib/tests.*
-.rpt2_cache
+/node_modules
+/src
+/lib/tests
+tsconfig.json
+tsconfig.es5.json
