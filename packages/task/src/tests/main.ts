@@ -1,5 +1,5 @@
-import assert from "assert";
-import { Task } from "./task";
+import * as assert from "assert";
+import { Task } from "../index";
 import { Slot, setTimeout } from "@wry/context";
 
 describe("Task", function () {

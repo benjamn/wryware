@@ -1,0 +1,40 @@
+{
+  "npmScope": "wry",
+  "tasksRunnerOptions": {
+    "default": {
+      "runner": "nx/tasks-runners/default",
+      "options": {
+        "cacheableOperations": [
+          "tsc",
+          "rollup",
+          "build"
+        ]
+      }
+    }
+  },
+  "targetDefaults": {
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "{projectRoot}/lib"
+      ]
+    },
+    "tsc": {
+      "outputs": [
+        "{projectRoot}/lib"
+      ]
+    },
+    "rollup": {
+      "outputs": [
+        "{projectRoot}/lib"
+      ]
+    },
+    "test": {
+      "dependsOn": [
+        "build"
+      ]
+    }
+  }
+}

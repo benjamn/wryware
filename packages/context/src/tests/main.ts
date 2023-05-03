@@ -5,7 +5,7 @@ import {
   noContext,
   setTimeout,
   asyncFromGen
-} from "./context";
+} from "../index";
 
 function repeat(s: string, times: number) {
   let result = "";
@@ -82,8 +82,8 @@ describe("Slot", function () {
     assert.strictEqual(oneWay, "oyezoyezoyez");
   });
 
-  it("is a singleton", function () {
-    const cjsSlotModule = require("../lib/slot.js");
+  it("is a singleton", async function () {
+    const cjsSlotModule = await import("../slot.js");
     assert.ok(new Slot<number>() instanceof cjsSlotModule.Slot);
     assert.ok(new cjsSlotModule.Slot() instanceof Slot);
     assert.strictEqual(cjsSlotModule.Slot, Slot);

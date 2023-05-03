@@ -4,9 +4,10 @@
   "author": "Ben Newman <ben@eloper.dev>",
   "description": "https://en.wikipedia.org/wiki/Trie",
   "license": "MIT",
-  "main": "lib/trie.js",
-  "module": "lib/trie.esm.js",
-  "types": "lib/trie.d.ts",
+  "type": "module",
+  "main": "lib/bundle.cjs",
+  "module": "lib/index.js",
+  "types": "lib/index.d.ts",
   "keywords": [
     "trie",
     "prefix",
@@ -23,13 +24,17 @@
     "url": "https://github.com/benjamn/wryware/issues"
   },
   "scripts": {
-    "clean": "../../node_modules/.bin/rimraf lib",
-    "tsc": "../../node_modules/.bin/tsc",
-    "rollup": "../../node_modules/.bin/rollup -c",
-    "build": "npm run clean && npm run tsc && npm run rollup",
-    "mocha": "../../scripts/test.sh lib/tests.js",
+    "build": "npm run clean:before && npm run tsc && npm run rollup && npm run clean:after",
+    "clean:before": "rimraf lib",
+    "tsc": "npm run tsc:es5 && npm run tsc:esm",
+    "tsc:es5": "tsc -p tsconfig.es5.json",
+    "tsc:esm": "tsc -p tsconfig.json",
+    "rollup": "rollup -c rollup.config.js",
+    "clean:after": "rimraf lib/es5",
     "prepare": "npm run build",
-    "test": "npm run build && npm run mocha"
+    "test:cjs": "../../scripts/test.sh lib/tests/bundle.cjs",
+    "test:esm": "../../scripts/test.sh lib/tests/bundle.js",
+    "test": "npm run test:esm && npm run test:cjs"
   },
   "dependencies": {
     "tslib": "^2.3.0"

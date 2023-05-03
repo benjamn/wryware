@@ -1,5 +1,5 @@
-import assert from "assert";
-import defaultEqual, { equal } from "./equality";
+import * as assert from "assert";
+import defaultEqual, { equal } from "../index";
 
 function toStr(value: any) {
   try {
