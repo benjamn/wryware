@@ -1,0 +1,9 @@
+{
+  "extends": "../../shared/tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "rootDir": "./src",
+    "outDir": "./lib",
+    "removeComments": true,
+  }
+}
