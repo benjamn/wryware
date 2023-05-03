@@ -1,6 +1,6 @@
 {
   "name": "@wry/task",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "author": "Ben Newman <ben@eloper.dev>",
   "description": "Promise-compatible asynchronous computation primitive",
   "license": "MIT",
@@ -37,7 +37,7 @@
     "test": "npm run test:esm && npm run test:cjs"
   },
   "dependencies": {
-    "@wry/context": "*",
+    "@wry/context": "^0.7.1",
     "tslib": "^2.3.0"
   },
   "engines": {
