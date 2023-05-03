@@ -6,9 +6,10 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "prepare": "lerna exec -- npm install --ignore-scripts",
+    "postinstall": "lerna exec -- npm install --ignore-scripts",
     "build": "nx run-many --target=build --all --parallel",
     "test": "nx run-many --target=test --all --parallel",
+    "prepare": "npm run build",
     "deploy": "lerna publish --no-push --dist-tag next"
   },
   "devDependencies": {
