@@ -26,8 +26,8 @@
     "rollup": "rollup -c rollup.config.js",
     "clean:after": "rimraf lib/es5",
     "prepare": "npm run build",
-    "test:cjs": "../../scripts/test.sh lib/tests/bundle.cjs",
-    "test:esm": "../../scripts/test.sh lib/tests/bundle.js",
+    "test:cjs": "../../shared/test.sh lib/tests/bundle.cjs",
+    "test:esm": "../../shared/test.sh lib/tests/bundle.js",
     "test": "npm run test:esm && npm run test:cjs"
   },
   "dependencies": {

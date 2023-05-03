@@ -1,1 +1,1 @@
-export { default } from "../../scripts/rollup.config.js";
+export { default } from "../../shared/rollup.config.js";

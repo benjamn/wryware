@@ -23,8 +23,8 @@
     "tsc": "tsc",
     "rollup": "rollup -c rollup.config.js",
     "prepare": "npm run build",
-    "test:cjs": "../../scripts/test.sh lib/tests/bundle.cjs",
-    "test:esm": "../../scripts/test.sh lib/tests/bundle.js",
+    "test:cjs": "../../shared/test.sh lib/tests/bundle.cjs",
+    "test:esm": "../../shared/test.sh lib/tests/bundle.js",
     "test": "npm run test:esm && npm run test:cjs"
   },
   "dependencies": {
