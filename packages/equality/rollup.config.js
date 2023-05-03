@@ -1,29 +1,7 @@
-const globals = {
-  __proto__: null,
-  tslib: "tslib",
-  // "@wry/context": "wryContext",
-  // "@wry/trie": "wryTrie",
-  // "@wry/task": "wryTask",
-  // "@wry/equality": "wryEquality",
-};
+import { build } from "../../scripts/rollup.config.js";
 
-function external(id) {
-  return id in globals;
-}
-
-function build(input, output, format) {
-  return {
-    input,
-    external,
-    output: {
-      file: output,
-      format,
-      sourcemap: true,
-      globals
-    },
-  };
-}
-
+// This package doesn't use the lib/es5 directory, so we need to override the
+// default export from ../../scripts/rollup.config.js.
 export default [
   build(
     "lib/index.js",

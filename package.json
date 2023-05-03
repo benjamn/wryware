@@ -4,6 +4,7 @@
   "author": "Ben Newman <ben@eloper.dev>",
   "description": "A collection of packages that are probably a little too clever",
   "license": "MIT",
+  "type": "module",
   "scripts": {
     "prepare": "lerna exec -- npm install --ignore-scripts",
     "build": "nx run-many --target=build --all --parallel",
