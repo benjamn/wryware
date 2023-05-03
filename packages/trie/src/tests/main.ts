@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { Trie } from "../index";
+import { Trie } from "../index.js";
 
 describe("Trie", function () {
   it("can be imported", function () {

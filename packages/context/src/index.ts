@@ -1,4 +1,4 @@
-import { Slot } from "./slot";
+import { Slot } from "./slot.js";
 export { Slot }
 export const { bind, noContext } = Slot;
 

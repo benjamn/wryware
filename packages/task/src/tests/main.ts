@@ -1,6 +1,6 @@
 import * as assert from "assert";
-import { Task } from "../index";
 import { Slot, setTimeout } from "@wry/context";
+import { Task } from "../index.js";
 
 describe("Task", function () {
   it("should be importable", function () {

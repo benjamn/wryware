@@ -5,7 +5,7 @@ import {
   noContext,
   setTimeout,
   asyncFromGen
-} from "../index";
+} from "../index.js";
 
 function repeat(s: string, times: number) {
   let result = "";
