@@ -8,7 +8,8 @@
   "scripts": {
     "prepare": "lerna exec -- npm install --ignore-scripts",
     "build": "nx run-many --target=build --all --parallel",
-    "test": "nx run-many --target=test --all --parallel"
+    "test": "nx run-many --target=test --all --parallel",
+    "deploy": "lerna publish --no-push --dist-tag next"
   },
   "devDependencies": {
     "@nx/js": "^16.0.2",
