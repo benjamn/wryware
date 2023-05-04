@@ -1,7 +1,7 @@
-import { build } from "../../scripts/rollup.config.js";
+import { build } from "../../shared/rollup.config.js";
 
 // This package doesn't use the lib/es5 directory, so we need to override the
-// default export from ../../scripts/rollup.config.js.
+// default export from ../../shared/rollup.config.js.
 export default [
   build(
     "lib/index.js",
