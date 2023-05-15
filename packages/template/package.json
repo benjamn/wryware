@@ -1,7 +1,7 @@
 {
   "name": "@wry/template",
   "private": true,
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": "Ben Newman <ben@eloper.dev>",
   "description": "Template for new @wry/* packages",
   "license": "MIT",

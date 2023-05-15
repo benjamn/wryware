@@ -1,6 +1,6 @@
 {
   "name": "@wry/trie",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "author": "Ben Newman <ben@eloper.dev>",
   "description": "https://en.wikipedia.org/wiki/Trie",
   "license": "MIT",
