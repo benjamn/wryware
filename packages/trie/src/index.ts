@@ -52,6 +52,32 @@ export class Trie<Data> {
     return node && node.data;
   }
 
+  public remove(...array: any[]): Data | undefined {
+    return this.removeArray(array);
+  }
+
+  public removeArray([head, ...tail]: any[]): Data | undefined {
+    const map: Trie<Data>["weak" | "strong"] =
+        this.weakness && isObjRef(head) ? this.weak : this.strong,
+      node = map && map.get(head);
+
+    if (!node) {
+      return;
+    }
+
+    const ret = tail.length ? node.removeArray(tail) : node.data;
+
+    if (!tail.length ) {
+      delete node.data
+    }
+    
+    if (!node.data && !node.weak && (!node.strong || !node.strong.size)) {
+      map.delete(head);
+    }
+
+    return ret;
+  }
+
   private getChildTrie(key: any) {
     const map = this.weakness && isObjRef(key)
       ? this.weak || (this.weak = new WeakMap<any, Trie<Data>>())
