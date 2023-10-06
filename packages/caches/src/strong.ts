@@ -1,3 +1,5 @@
+import type { CommonCache } from "./common";
+
 interface Node<K, V> {
   key: K;
   value: V;
@@ -7,7 +9,7 @@ interface Node<K, V> {
 
 function defaultDispose() {}
 
-export class StrongCache<K = any, V = any> {
+export class StrongCache<K = any, V = any> implements CommonCache<K, V> {
   private map = new Map<K, Node<K, V>>();
   private newest: Node<K, V> | null = null;
   private oldest: Node<K, V> | null = null;

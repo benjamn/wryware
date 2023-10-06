@@ -1,6 +1,7 @@
 {
   "extends": "../../shared/tsconfig.json",
   "compilerOptions": {
+    "lib": ["es2015", "ES2021.WeakRef"],
     "rootDir": "./src",
     "outDir": "./lib"
   }
