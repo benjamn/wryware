@@ -23,8 +23,9 @@ export class Trie<Data> {
     private makeData: (array: any[]) => Data = defaultMakeData,
   ) {}
 
-  public lookup<T extends any[]>(...array: T): Data {
-    return this.lookupArray(array);
+  public lookup<T extends any[]>(...array: T): Data;
+  public lookup(): Data {
+    return this.lookupArray(arguments);
   }
 
   public lookupArray<T extends IArguments | any[]>(array: T): Data {
@@ -35,8 +36,9 @@ export class Trie<Data> {
       : node.data = this.makeData(slice.call(array));
   }
 
-  public peek<T extends any[]>(...array: T): Data | undefined {
-    return this.peekArray(array);
+  public peek<T extends any[]>(...array: T): Data | undefined;
+  public peek(): Data | undefined {
+    return this.peekArray(arguments);
   }
 
   public peekArray<T extends IArguments | any[]>(array: T): Data | undefined {
@@ -50,8 +52,9 @@ export class Trie<Data> {
     return node && node.data;
   }
 
-  public remove(...array: any[]): Data | undefined {
-    return this.removeArray(array);
+  public remove(...array: any[]): Data | undefined;
+  public remove(): Data | undefined {
+    return this.removeArray(arguments);
   }
 
   public removeArray([head, ...tail]: any[]): Data | undefined {
