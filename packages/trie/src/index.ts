@@ -43,9 +43,7 @@ export class Trie<Data> {
     let node: Trie<Data> | undefined = this;
 
     for (let i = 0, len = array.length; node && i < len; ++i) {
-      const map: Trie<Data>["weak" | "strong"] =
-        this.weakness && isObjRef(array[i]) ? node.weak : node.strong;
-
+      const map = node.mapFor(array[i], false);
       node = map && map.get(array[i]);
     }
 
@@ -79,12 +77,16 @@ export class Trie<Data> {
   }
 
   private getChildTrie(key: any) {
-    const map = this.weakness && isObjRef(key)
-      ? this.weak || (this.weak = new WeakMap<any, Trie<Data>>())
-      : this.strong || (this.strong = new Map<any, Trie<Data>>());
+    const map = this.mapFor(key, true)!;
     let child = map.get(key);
     if (!child) map.set(key, child = new Trie<Data>(this.weakness, this.makeData));
     return child;
+  }
+
+  private mapFor(key: any, create: boolean): Trie<Data>["weak" | "strong"] | undefined {
+    return this.weakness && isObjRef(key)
+      ? this.weak || (create ? this.weak = new WeakMap : void 0)
+      : this.strong || (create ? this.strong = new Map : void 0);
   }
 }
 
