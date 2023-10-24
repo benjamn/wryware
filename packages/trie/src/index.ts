@@ -57,26 +57,25 @@ export class Trie<Data> {
     return this.removeArray(arguments);
   }
 
-  public removeArray([head, ...tail]: any[]): Data | undefined {
-    const map: Trie<Data>["weak" | "strong"] =
-        this.weakness && isObjRef(head) ? this.weak : this.strong,
-      node = map && map.get(head);
+  public removeArray<T extends IArguments | any[]>(array: T): Data | undefined {
+    let data: Data | undefined;
 
-    if (!node) {
-      return;
+    if (array.length) {
+      const head = array[0];
+      const map = this.mapFor(head, false);
+      const child = map && map.get(head);
+      if (child) {
+        data = child.removeArray(slice.call(array, 1));
+        if (!child.data && !child.weak && !(child.strong && child.strong.size)) {
+          map.delete(head);
+        }
+      }
+    } else {
+      data = this.data;
+      delete this.data;
     }
 
-    const ret = tail.length ? node.removeArray(tail) : node.data;
-
-    if (!tail.length ) {
-      delete node.data
-    }
-    
-    if (!node.data && !node.weak && (!node.strong || !node.strong.size)) {
-      map.delete(head);
-    }
-
-    return ret;
+    return data;
   }
 
   private getChildTrie(key: any) {
