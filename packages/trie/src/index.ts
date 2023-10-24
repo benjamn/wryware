@@ -23,8 +23,9 @@ export class Trie<Data> {
     private makeData: (array: any[]) => Data = defaultMakeData,
   ) {}
 
-  public lookup<T extends any[]>(...array: T): Data {
-    return this.lookupArray(array);
+  public lookup<T extends any[]>(...array: T): Data;
+  public lookup(): Data {
+    return this.lookupArray(arguments);
   }
 
   public lookupArray<T extends IArguments | any[]>(array: T): Data {
@@ -35,30 +36,59 @@ export class Trie<Data> {
       : node.data = this.makeData(slice.call(array));
   }
 
-  public peek<T extends any[]>(...array: T): Data | undefined {
-    return this.peekArray(array);
+  public peek<T extends any[]>(...array: T): Data | undefined;
+  public peek(): Data | undefined {
+    return this.peekArray(arguments);
   }
 
   public peekArray<T extends IArguments | any[]>(array: T): Data | undefined {
     let node: Trie<Data> | undefined = this;
 
     for (let i = 0, len = array.length; node && i < len; ++i) {
-      const map: Trie<Data>["weak" | "strong"] =
-        this.weakness && isObjRef(array[i]) ? node.weak : node.strong;
-
+      const map = node.mapFor(array[i], false);
       node = map && map.get(array[i]);
     }
 
     return node && node.data;
   }
 
+  public remove(...array: any[]): Data | undefined;
+  public remove(): Data | undefined {
+    return this.removeArray(arguments);
+  }
+
+  public removeArray<T extends IArguments | any[]>(array: T): Data | undefined {
+    let data: Data | undefined;
+
+    if (array.length) {
+      const head = array[0];
+      const map = this.mapFor(head, false);
+      const child = map && map.get(head);
+      if (child) {
+        data = child.removeArray(slice.call(array, 1));
+        if (!child.data && !child.weak && !(child.strong && child.strong.size)) {
+          map.delete(head);
+        }
+      }
+    } else {
+      data = this.data;
+      delete this.data;
+    }
+
+    return data;
+  }
+
   private getChildTrie(key: any) {
-    const map = this.weakness && isObjRef(key)
-      ? this.weak || (this.weak = new WeakMap<any, Trie<Data>>())
-      : this.strong || (this.strong = new Map<any, Trie<Data>>());
+    const map = this.mapFor(key, true)!;
     let child = map.get(key);
     if (!child) map.set(key, child = new Trie<Data>(this.weakness, this.makeData));
     return child;
+  }
+
+  private mapFor(key: any, create: boolean): Trie<Data>["weak" | "strong"] | undefined {
+    return this.weakness && isObjRef(key)
+      ? this.weak || (create ? this.weak = new WeakMap : void 0)
+      : this.strong || (create ? this.strong = new Map : void 0);
   }
 }
 
