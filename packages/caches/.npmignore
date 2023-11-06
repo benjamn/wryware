@@ -1,0 +1,4 @@
+/node_modules
+/lib/tests
+tsconfig.json
+tsconfig.es5.json
