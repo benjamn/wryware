@@ -1,1 +1,1 @@
-export const name = "@wry/caches";
+export { StrongCache } from "./strong.js";
