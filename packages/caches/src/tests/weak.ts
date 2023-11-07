@@ -2,16 +2,22 @@ import * as assert from "assert";
 import { WeakCache } from "../weak.js";
 
 describe("weak least-recently-used cache", function () {
-  it("can hold lots of elements", function () {
+  it("can hold lots of elements", async function () {
+    this.timeout(5000);
     const cache = new WeakCache();
     const count = 1000000;
     const keys = [];
 
+    console.time("filling up cache");
     for (let i = 0; i < count; ++i) {
       const key = {};
       cache.set(key, String(i));
       keys[i] = key;
     }
+    console.timeEnd("filling up cache");
+    console.time("waiting for finalization");
+    await waitForCache(cache);
+    console.timeEnd("waiting for finalization");
 
     cache.clean();
 
@@ -47,59 +53,85 @@ describe("weak least-recently-used cache", function () {
     }
   });
 
-  it("can cope with small max values", function () {
+  it("evicts elements that are garbage collected", async function () {
+    const cache = new WeakCache();
+
+    const count = 100;
+    const keys: Array<String | null> = [];
+    for (let i = 0; i < count; ++i) {
+      keys[i] = new String(i);
+      cache.set(keys[i], String(i));
+    }
+
+    assert.strictEqual(cache.size, 100);
+    await waitForCache(cache);
+    assert.strictEqual(cache.size, 100);
+
+    for (let i = 0; i < 50; ++i) {
+      keys[i] = null;
+    }
+
+    global.gc!();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    global.gc!();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.strictEqual(cache.size, 50);
+  });
+
+  it("can cope with small max values", async function () {
     const cache = new WeakCache(2);
     const keys = Array(10)
       .fill(null)
       .map((_, i) => new Number(i));
 
-    function check(...sequence: number[]) {
+    async function check(...sequence: number[]) {
+      await waitForCache(cache);
       cache.clean();
 
-      let entry = (cache as any).newest;
+      let entry = cache["newest"];
       const forwards = [];
       while (entry) {
-        forwards.push(entry.keyRef.deref());
+        forwards.push(entry.keyRef?.deref());
         entry = entry.older;
       }
       assert.deepEqual(forwards.map(Number), sequence);
 
       const backwards = [];
-      entry = (cache as any).oldest;
+      entry = cache["oldest"];
       while (entry) {
-        backwards.push(entry.keyRef.deref());
+        backwards.push(entry.keyRef?.deref());
         entry = entry.newer;
       }
       backwards.reverse();
       assert.deepEqual(backwards.map(Number), sequence);
 
       sequence.forEach(function (n) {
-        assert.strictEqual((cache as any).map.get(keys[n]).value, n + 1);
+        assert.strictEqual(cache["map"].get(keys[n])?.value, n + 1);
       });
 
       if (sequence.length > 0) {
-        assert.strictEqual((cache as any).newest.keyRef.deref().valueOf(), sequence[0]);
         assert.strictEqual(
-          (cache as any).oldest.keyRef.deref().valueOf(),
+          cache["oldest"]?.keyRef?.deref().valueOf(),
           sequence[sequence.length - 1]
         );
       }
     }
 
     cache.set(keys[1], 2);
-    check(1);
+    await check(1);
 
     cache.set(keys[2], 3);
-    check(2, 1);
+    await check(2, 1);
 
     cache.set(keys[3], 4);
-    check(3, 2);
+    await check(3, 2);
 
     cache.get(keys[2]);
-    check(2, 3);
+    await check(2, 3);
 
     cache.set(keys[4], 5);
-    check(4, 2);
+    await check(4, 2);
 
     assert.strictEqual(cache.has(keys[1]), false);
     assert.strictEqual(cache.get(keys[2]), 3);
@@ -107,11 +139,17 @@ describe("weak least-recently-used cache", function () {
     assert.strictEqual(cache.get(keys[4]), 5);
 
     cache.delete(keys[2]);
-    check(4);
+    await check(4);
     cache.delete(keys[4]);
-    check();
+    await check();
 
     assert.strictEqual((cache as any).newest, null);
     assert.strictEqual((cache as any).oldest, null);
   });
 });
+
+async function waitForCache(cache: WeakCache) {
+  while (cache["finalizationScheduled"]) {
+    await new Promise<void>(queueMicrotask);
+  }
+}

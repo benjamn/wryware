@@ -1,11 +1,22 @@
 import type { CommonCache } from "./common";
 
-interface Node<K extends object, V> {
-  keyRef: WeakRef<K>;
+interface PartialNode<K extends object, V> {
   value: V;
   newer: Node<K, V> | null;
   older: Node<K, V> | null;
 }
+
+interface UnfinalizedNode<K extends object, V> extends PartialNode<K, V> {
+  keyRef?: undefined;
+  key: K;
+}
+
+interface FullNode<K extends object, V> extends PartialNode<K, V> {
+  keyRef: WeakRef<K>;
+  key?: undefined;
+}
+
+type Node<K extends object, V> = FullNode<K, V> | UnfinalizedNode<K, V>;
 
 function noop() {}
 const defaultDispose = noop;
@@ -30,11 +41,17 @@ const _FinalizationRegistry =
         } satisfies Omit<FinalizationRegistry<T>, typeof Symbol.toStringTag>;
       } as any as typeof FinalizationRegistry);
 
-export class WeakCache<K extends object = any, V = any> implements CommonCache<K, V> {
+const finalizationBatchSize = 10024;
+
+export class WeakCache<K extends object = any, V = any>
+  implements CommonCache<K, V>
+{
   private map = new _WeakMap<K, Node<K, V>>();
   private registry: FinalizationRegistry<Node<K, V>>;
   private newest: Node<K, V> | null = null;
   private oldest: Node<K, V> | null = null;
+  private unfinalizedNodes: Set<UnfinalizedNode<K, V>> = new Set();
+  private finalizationScheduled = false;
   public size = 0;
 
   constructor(
@@ -90,7 +107,7 @@ export class WeakCache<K extends object = any, V = any> implements CommonCache<K
     }
 
     node = {
-      keyRef: new _WeakRef(key),
+      key,
       value,
       newer: null,
       older: this.newest,
@@ -103,7 +120,7 @@ export class WeakCache<K extends object = any, V = any> implements CommonCache<K
     this.newest = node;
     this.oldest = this.oldest || node;
 
-    this.registry.register(key, node, node);
+    this.scheduleFinalization(node);
     this.map.set(key, node);
     this.size++;
 
@@ -132,10 +149,15 @@ export class WeakCache<K extends object = any, V = any> implements CommonCache<K
     if (node.older) {
       node.older.newer = node.newer;
     }
+
     this.size--;
-    const key = node.keyRef.deref();
+    const key = node.key || (node.keyRef && node.keyRef.deref());
     this.dispose(node.value, key);
-    this.registry.unregister(node);
+    if (!node.keyRef) {
+      this.unfinalizedNodes.delete(node);
+    } else {
+      this.registry.unregister(node);
+    }
     if (key) this.map.delete(key);
   }
 
@@ -149,4 +171,32 @@ export class WeakCache<K extends object = any, V = any> implements CommonCache<K
 
     return false;
   }
+
+  private scheduleFinalization(node: UnfinalizedNode<K, V>) {
+    this.unfinalizedNodes.add(node);
+    if (!this.finalizationScheduled) {
+      this.finalizationScheduled = true;
+      queueMicrotask(this.finalize);
+    }
+  }
+
+  private finalize = () => {
+    console.time("finalizing a chunk");
+    const iterator = this.unfinalizedNodes.values();
+    for (let i = 0; i < finalizationBatchSize; i++) {
+      const node = iterator.next().value;
+      if (!node) break;
+      this.unfinalizedNodes.delete(node);
+      const key = node.key;
+      delete (node as unknown as FullNode<K, V>).key;
+      (node as unknown as FullNode<K, V>).keyRef = new _WeakRef(key);
+      this.registry.register(key, node, node);
+    }
+    if (this.unfinalizedNodes.size > 0) {
+      queueMicrotask(this.finalize);
+    } else {
+      this.finalizationScheduled = false;
+    }
+    console.timeEnd("finalizing a chunk");
+  };
 }
