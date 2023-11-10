@@ -181,7 +181,6 @@ export class WeakCache<K extends object = any, V = any>
   }
 
   private finalize = () => {
-    console.time("finalizing a chunk");
     const iterator = this.unfinalizedNodes.values();
     for (let i = 0; i < finalizationBatchSize; i++) {
       const node = iterator.next().value;
@@ -197,6 +196,5 @@ export class WeakCache<K extends object = any, V = any>
     } else {
       this.finalizationScheduled = false;
     }
-    console.timeEnd("finalizing a chunk");
   };
 }

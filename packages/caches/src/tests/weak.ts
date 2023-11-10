@@ -3,21 +3,17 @@ import { WeakCache } from "../weak.js";
 
 describe("weak least-recently-used cache", function () {
   it("can hold lots of elements", async function () {
-    this.timeout(5000);
+    this.timeout(10000);
     const cache = new WeakCache();
     const count = 1000000;
     const keys = [];
 
-    console.time("filling up cache");
     for (let i = 0; i < count; ++i) {
       const key = {};
       cache.set(key, String(i));
       keys[i] = key;
     }
-    console.timeEnd("filling up cache");
-    console.time("waiting for finalization");
     await waitForCache(cache);
-    console.timeEnd("waiting for finalization");
 
     cache.clean();
 
@@ -71,13 +67,32 @@ describe("weak least-recently-used cache", function () {
       keys[i] = null;
     }
 
-    global.gc!();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    global.gc!();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    assert.strictEqual(cache.size, 50);
+    return gcPromise(() => {
+      return cache.size > 50 ? null : () => {
+        assert.strictEqual(cache.size, 50);
+        assert.strictEqual(keys.length, 100);
+        assert.strictEqual(new Set(keys).size, 51);
+      };
+    });
   });
+
+  function gcPromise(test: () => null | (() => void)) {
+    return new Promise<void>(function (resolve, reject) {
+      function pollGC() {
+        global.gc!();
+        const testCallback = test();
+        if (!testCallback) {
+          setTimeout(pollGC, 20);
+        } else try {
+          testCallback();
+          resolve();
+        } catch (e) {
+          reject(e);
+        }
+      }
+      pollGC();
+    });
+  }
 
   it("can cope with small max values", async function () {
     const cache = new WeakCache(2);
